@@ -1,0 +1,44 @@
+node_modules/
+log.jsonl
+ledger.jsonl
+api-key.txt
+*.bak
+.DS_Store
+
+# ---- 运行时产物 / 本地数据，不入库 ----
+# 注意：gitignore 不支持行尾注释，注释必须单独占一行，
+# 否则整行（含注释文字）会被当成字面量模式，规则静默失效。
+
+# WebView2 用户目录，44MB，全是缓存和 cookie
+webview2-data/
+
+# 弃用的 WebView2 运行时 DLL，850KB 二进制
+_retired/webview2/
+
+# 渲染探针脚本（临时验证用，不进版本库）
+_dev/
+
+# 你用过哪些软件的时间统计 —— 本地数据
+sense-state.json
+sense-history.json
+
+# 个人状态数据：XP / 待办 / 每周自省，纯本地。
+# 模板是 state.example.json，复制成 state.json 使用。
+state.json
+
+# 自备的舞台图片与歌词（有版权，不入库）
+assets/*/*.jpg
+assets/*/*.jpeg
+assets/*/*.png
+assets/*/*.webp
+assets/*/lyric*.txt
+
+# 情报简讯（可选功能，自己那份数据）
+briefs.json
+
+# 运行日志
+_ball-log.txt
+_wall-log.txt
+ball-pos.txt
+briefs-update.log
+*.log
