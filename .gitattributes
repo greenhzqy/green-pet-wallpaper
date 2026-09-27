@@ -1,0 +1,15 @@
+# 默认统一成 LF，避免跨平台 diff 噪音
+* text=auto eol=lf
+
+# Windows 脚本必须 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.vbs text eol=crlf
+
+# 二进制
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary

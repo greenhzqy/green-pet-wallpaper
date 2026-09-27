@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Green · 记一笔</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;
+    background:radial-gradient(120% 100% at 50% 0%, #12241a 0%, #08120d 62%, #050a08 100%);
+    color:#e8fbf0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    user-select:none;-webkit-user-select:none}
+  #wrap{padding:16px 20px 14px;display:flex;flex-direction:column;gap:11px;height:100%;box-sizing:border-box}
+  #head{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.34em;color:#e8c08a;opacity:.72}
+  #head i{width:6px;height:6px;border-radius:50%;background:#7ee787;box-shadow:0 0 8px #7ee787}
+  #head b{margin-left:auto;font-weight:400;letter-spacing:.14em;opacity:.6;font-size:10.5px}
+  #row{display:flex;align-items:center;gap:11px;flex:1;
+    padding:0 15px;border-radius:11px;background:rgba(4,10,7,.7);
+    border:1px solid rgba(126,231,135,.3)}
+  #row:focus-within{border-color:rgba(126,231,135,.72);box-shadow:0 0 0 3px rgba(126,231,135,.16)}
+  #caret{color:#7ee787;font-size:13px;opacity:.8}
+  #t{flex:1;background:none;border:0;outline:none;color:#e8fbf0;
+    font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:17px;letter-spacing:.02em;caret-color:#7ee787}
+  #t::placeholder{color:#7fa892;opacity:.62;font-size:15px}
+  #foot{font-size:10.5px;letter-spacing:.14em;color:#8fb3a3;opacity:.55}
+  #foot b{color:#e8c08a;font-weight:400}
+  #ok{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;gap:8px;background:rgba(5,12,8,.96)}
+  #ok.on{display:flex}
+  #ok .big{font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:20px;letter-spacing:.3em;color:#7ee787}
+  #ok .sub{font-size:11.5px;letter-spacing:.16em;color:#8fb3a3}
+</style></head>
+<body>
+<div id="wrap">
+  <div id="head"><i></i>GREEN 记一笔<b id="cnt"></b></div>
+  <div id="row">
+    <span id="caret">&gt;</span>
+    <input id="t" type="text" autocomplete="off" spellcheck="false"
+           aria-label="写一句，回车保存" placeholder="现在在想什么？写一句">
+  </div>
+  <div id="foot">回车保存 · <b>Esc</b> 关掉 · 不写也没关系</div>
+</div>
+<div id="ok"><div class="big">记下了</div><div class="sub" id="oksub"></div></div>
+<script src="perf.js"></script>
+<script>
+(function () {
+  "use strict";
+  var t = document.getElementById("t");
+  var ok = document.getElementById("ok");
+  var oksub = document.getElementById("oksub");
+  var cnt = document.getElementById("cnt");
+  var writing = false;
+
+  // 记住"今天已经几条"，给一点即时反馈
+  fetch("/log?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      var es = (j && j.entries) || [];
+      var tk = new Date().toDateString();
+      var n = es.filter(function (e) { return new Date(e.t || 0).toDateString() === tk; }).length;
+      todayN = n;
+      if (cnt) cnt.textContent = n ? "今天第 " + (n + 1) + " 条" : "今天第一条";
+    }).catch(function () {});
+
+  var todayN = 0;
+  t.focus();
+
+  function close() { try { window.close(); } catch (e) {} }
+
+  function save() {
+    var text = (t.value || "").trim();
+    if (!text || writing) { if (!text) close(); return; }
+    writing = true;
+    fetch("/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ type: "note", text: text, from: "note-window" })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.ok) {
+        oksub.textContent = "今天第 " + (todayN + 1) + " 条";
+        ok.classList.add("on");
+        // ★ 让壁纸上的宠物当场跳一下 —— 你在这边写，它在那边有反应
+        try { fetch("/cheer", { method: "POST" }).catch(function () {}); } catch (e) {}
+        setTimeout(close, 950);
+      } else { writing = false; }
+    }).catch(function () { writing = false; });
+  }
+
+  t.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+    else if (e.key === "Escape") { e.preventDefault(); close(); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") close();
+  });
+})();
+</script>
+</body></html>

@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Green · 壁纸</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    background:var(--bg-1,#050a08);color:var(--ink,#e9fff2);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    user-select:none;-webkit-user-select:none}
+  #scene{position:fixed;inset:0;overflow:hidden}
+  /* 整场只有右侧有内容，左侧完全留空给桌面图标 */
+  #scene::before{content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(78% 96% at 74% 48%, color-mix(in srgb,var(--sky,#7ee787) 13%,transparent), transparent 66%),
+      linear-gradient(180deg, var(--bg-2,#0a1811) 0%, var(--bg-1,#050a08) 54%, #030705 100%)}
+  /* 环境光球只在右侧活动 */
+  /* ★ 柔光块不需要 filter:blur —— 径向渐变本身就是柔的，而且零滤镜成本。
+     原来 blur(80px) 叠加动画 transform，等于每帧重新模糊一个 34vw 的区域。 */
+  .orb{position:absolute;pointer-events:none;opacity:.5;
+    will-change:transform}          /* 提升为合成层：动画只移动，不重绘 */
+  .o1{width:64vw;height:64vw;right:-10vw;top:-16vw;animation:d1 46s ease-in-out infinite;
+    background:radial-gradient(circle at 50% 50%, var(--amb-1,#3fbf6f) 0%, transparent 60%)}
+  .o2{width:52vw;height:52vw;right:-14vw;bottom:-12vh;animation:d2 58s ease-in-out infinite;
+    background:radial-gradient(circle at 50% 50%, var(--amb-2,#22a06b) 0%, transparent 62%)}
+  @keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(-3vw,4vh)}}
+  @keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(3vw,-4vh)}}
+
+  /* ============ 舞台：整体靠右 ============ */
+  #stage{position:relative;flex:0 0 auto;
+    display:flex;flex-direction:column;align-items:center}
+  /* 宠物 / 光束 / 日环都以"屏幕"为参照，而不是整个舞台（否则会压到下方文字） */
+  /* 注意：#screen-wrap 只能 contain layout/style，不能加 paint ——
+     宠物靠负 bottom 伸出屏幕下方，paint containment 会把它裁掉 */
+  #screen-wrap{contain:layout style;position:relative;width:var(--screen,380px);height:var(--screen,380px)}
+
+  /* 背景屏：方大同的照片，处理成 LED 屏的质感 */
+  #screen{contain:layout paint style;position:relative;width:var(--screen,470px);height:var(--screen,470px);
+    border-radius:7px;overflow:hidden;background:#070d0a;
+    box-shadow:0 0 0 1px rgba(255,255,255,.07), 0 34px 90px rgba(0,0,0,.72)}
+  #screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+    object-position:50% var(--crop,26%);
+    filter:saturate(.74) contrast(1.06) brightness(.94);
+    opacity:0;transition:opacity 1.9s ease-in-out}
+  #screen img.on{opacity:1}
+  /* LED 扫描线 —— 让它读起来是"屏幕"而不是"一张照片" */
+  /* 去掉 mix-blend-mode:overlay —— 混合模式让 #screen 无法作为独立层合成 */
+  #screen .scan{position:absolute;inset:0;pointer-events:none;opacity:.42;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.055) 0 1px, rgba(0,0,0,.10) 1px 3px)}
+  /* 暗角 + 墨绿染色，把照片压进场景里 */
+  #screen .vig{position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(96% 90% at 50% 40%, rgba(0,0,0,0) 42%, rgba(2,8,5,.52) 100%),
+      linear-gradient(180deg, rgba(6,20,13,.22) 0%, rgba(4,12,8,.02) 46%, rgba(2,7,5,.62) 100%)}
+  /* 屏幕下方的雾气，让屏和地面接得住 */
+  #haze{position:absolute;left:-14%;right:-14%;bottom:-4%;height:32%;pointer-events:none;
+    background:radial-gradient(58% 100% at 50% 104%, rgba(126,231,135,.16) 0%, rgba(126,231,135,.06) 46%, transparent 78%)}
+
+  /* 光束：从上方打下来 */
+  /* ★ 去掉 blur 和 mix-blend-mode：混合模式会强制整个堆叠上下文重新合成，
+     而径向渐变本身就能画出柔和的光锥。 */
+  /* 光束容器：鼠标驱动的是这一层，CSS 旋转动画在内层 —— 两个 transform 分开，互不覆盖 */
+  #beams{position:absolute;inset:0;pointer-events:none;will-change:transform}
+  .beam{position:absolute;top:-46%;width:150px;height:168%;pointer-events:none;
+    will-change:transform;transform-origin:50% 0;
+    background:radial-gradient(46% 66% at 50% 6%,
+      rgba(255,238,196,.26) 0%, rgba(255,238,196,.10) 34%, rgba(255,238,196,0) 76%)}
+  .b1{left:16%;transform:rotate(11deg);animation:sw1 13s ease-in-out infinite}
+  .b2{left:47%;width:130px;transform:rotate(-4deg);animation:sw2 17s ease-in-out infinite}
+  .b3{left:78%;transform:rotate(-13deg);animation:sw3 15s ease-in-out infinite}
+  @keyframes sw1{0%,100%{transform:rotate(11deg)}50%{transform:rotate(15deg)}}
+  @keyframes sw2{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(1deg)}}
+  @keyframes sw3{0%,100%{transform:rotate(-13deg)}50%{transform:rotate(-8deg)}}
+
+  /* 舞台地面 */
+  #floor{position:absolute;left:-14%;right:-14%;bottom:-1px;height:2px;
+    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent,#7ee787) 34%,transparent) 22%,
+      color-mix(in srgb,var(--accent,#7ee787) 34%,transparent) 78%,transparent)}
+
+  /* 宠物：台前，压在屏幕下沿 */
+  /* 宠物探出屏幕下沿的比例。键盘位置用它来算，所以两者永远对齐 ——
+     之前两处各写一个 -0.34，改一处忘一处就会错位。 */
+  :root{--pet-oh:.44;--kbd-h:70px;--tb:48px}
+  /* --tb = 任务栏高度。壁纸铺满整屏 1707x1067，而工作区只有 1019 ——
+     底部这 48px 永远被任务栏盖着，任何贴底的东西都必须让开它。 */
+  #pet-wrap{position:absolute;left:50%;bottom:calc(var(--pet,300px) * var(--pet-oh) * -1);
+    transform:translateX(-50%);width:var(--pet,300px);height:var(--pet,300px);
+    /* z 高于键盘（键盘所在的 #petdeck 是 6）—— 跳舞机里脚是踩在板子上面的，
+       被键盘挡住就完全看不出"踩"这个动作。canvas 是透明的，身体在上半部分，
+       所以不会挡住键盘的可视区域。 */
+    z-index:8}
+  #screen-wrap .beam{top:-30%;height:130%}
+  #sprite{width:100%;height:100%}
+  #day-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:calc(var(--screen,380px) * 1.42);height:calc(var(--screen,380px) * 1.42);
+    color:var(--accent,#7ee787);opacity:.72;z-index:4;pointer-events:none}
+
+  /* ============ 右侧文字 ============ */
+  /* ★ 文字挪到屏幕上方。原来它在屏幕下面，正好和键盘占同一条竖直带 ——
+     实拍里「9月23日·周三」直接压在键帽上。 */
+  #meta{order:-1;margin:0 0 14px;text-align:center;
+    color:color-mix(in srgb,var(--accent,#7ee787) 54%,#9fbfae)}
+  #meta .date{font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:24px;letter-spacing:.24em;color:#e8c08a;opacity:.78}
+  #meta .cap{margin-top:12px;font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:14px;letter-spacing:.2em;color:#e8c08a;opacity:.62;
+    transition:opacity .7s ease}
+  #meta .line{margin-top:10px;font-size:12.5px;letter-spacing:.16em;opacity:.5;
+    font-variant-numeric:tabular-nums}
+  #meta .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;
+    margin-right:8px;vertical-align:2px;opacity:.8}
+
+  /* ============ 左侧：今夜曲目 ============
+     桌面图标只占最左一列（约 4.5vw），所以曲目牌从 7vw 开始，不会打架。
+     这一块是"氛围"不是"内容"：大字号、低透明度，像舞台侧墙上的曲目牌。 */
+  /* 中间那道光：地面反光从左侧一直铺到舞台，把左右连起来 */
+  #floorwash{position:absolute;left:0;right:0;top:50%;height:34vh;transform:translateY(-6%);
+    pointer-events:none;
+    background:linear-gradient(90deg, rgba(126,231,135,0) 0%,
+      rgba(126,231,135,.045) 46%, rgba(126,231,135,.075) 78%, rgba(126,231,135,0) 100%)}
+  #leftglow{position:absolute;left:-4vw;top:0;bottom:0;width:30vw;pointer-events:none;
+    background:radial-gradient(58% 50% at 20% 50%, rgba(126,231,135,.055), transparent 74%)}
+  /* 曲目牌 + 舞台 = 一个整体，锚在右侧。这样屏幕多宽，两者距离都恒定 */
+  /* top:47% 而不是 50% —— 底部有对话框，舞台整体上移让出空间，避免文字被压住 */
+  /* top 从 47% 上移到 37%：舞台下方现在挂着键盘，整体要让出空间 */
+  /* right 从 4.5vw 挪到 7vw：键盘比屏幕宽，舞台要左移给它让出空间 */
+  /* top 26% → 31%：键盘上移贴住宠物后，底部空出一段，舞台上移填回来 */
+  #cluster{contain:layout style;position:absolute;right:7vw;top:31%;transform:translateY(-50%);
+    display:flex;align-items:center;gap:64px}
+  #setlist{position:relative;flex:0 0 auto;text-align:right;
+    font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;pointer-events:none;
+    list-style:none;margin:0;padding:0}
+  #setlist .sl-title{font-size:11.5px;letter-spacing:.62em;color:#e8c08a;opacity:.40}
+  #setlist .sl-rule{width:36px;height:1px;background:#e8c08a;opacity:.26;margin:11px 0 22px}
+  #setlist ul{list-style:none;margin:0;padding:0}
+  #setlist li{position:relative;font-size:27px;letter-spacing:.3em;line-height:2.05;
+    color:#e8c08a;opacity:.15;padding-left:20px;
+    transition:opacity 1.3s ease, color 1.3s ease, transform 1.3s ease}
+  #setlist li::before{content:"";position:absolute;left:0;top:50%;width:9px;height:1px;
+    background:currentColor;opacity:.45;transition:width .9s ease, opacity .9s ease}
+  #setlist li.on{opacity:.92;transform:translateX(7px)}
+  #setlist li.on::before{width:15px;opacity:1}
+  #setlist .sl-en{margin-top:20px;font-family:-apple-system,"Segoe UI",sans-serif;
+    font-size:10.5px;letter-spacing:.34em;color:#e8c08a;opacity:.30;padding-left:20px}
+
+  /* ============ 宠物说的话（原来在悬浮球里，现在搬到壁纸） ============ */
+  #say{position:absolute;left:50%;bottom:calc(100% + 14px);transform:translate(-50%,6px);
+    max-width:270px;padding:9px 14px;border-radius:12px;
+    background:rgba(8,18,13,.94);border:1px solid rgba(126,231,135,.30);
+    color:#dff7e8;font-size:13px;line-height:1.6;letter-spacing:.01em;text-align:center;
+    opacity:0;pointer-events:none;white-space:nowrap;
+    box-shadow:0 14px 36px rgba(0,0,0,.6);
+    transition:opacity .28s ease-out, transform .3s cubic-bezier(.22,1,.36,1)}
+  #say.on{opacity:1;transform:translate(-50%,0)}
+  #say b{color:#7ee787;font-weight:600}
+  /* 宠物可交互（原来只有悬浮球能点） */
+  #pet-wrap{cursor:pointer}
+  #pet-wrap:active{cursor:grabbing}
+
+  /* 省电模式：把环境光球和光束的动画全停掉（它们只是氛围，停了不影响信息） */
+  html[data-lowpower="1"] .orb,
+  html[data-lowpower="1"] .beam{animation:none !important}
+
+
+  /* ============ Galgame 对话框 ============
+     宠物用它说话，面板里的简讯/待办也走这里推。
+     要点：点击先补完打字机，再点才"进去"——这是 galgame 的标准手感。 */
+  /* left 从 20vw 改到 27vw：左下角留给跟着按键的小键盘，两者不再重叠 */
+  #dlg{position:absolute;left:27vw;right:4.5vw;bottom:calc(24px + var(--tb));z-index:20;
+    padding:0 0 0 0;cursor:pointer;
+    opacity:1}
+  /* ★ 过渡只写在 .off 上：
+     移除 .off 走基础规则（无过渡）→ 出现是瞬时的；
+     加上 .off 走 .off 的过渡 → 消失是渐隐的。
+     写在基础规则上会让"出现"也走过渡，而被节流的环境不推进过渡，
+     结果永远停在半透明 —— 这个坑在这个项目里已经踩了四次。 */
+  #dlg.off{opacity:0;pointer-events:none;transition:opacity .7s ease}
+
+  #dlg .d-frame{position:relative;border-radius:15px;padding:20px 30px 22px 34px;
+    background:
+      linear-gradient(180deg, rgba(126,231,135,.055) 0%, rgba(126,231,135,0) 34%),
+      linear-gradient(155deg, rgba(15,33,23,.965) 0%, rgba(8,18,13,.955) 58%, rgba(6,14,10,.965) 100%);
+    border:1px solid rgba(126,231,135,.20);
+    box-shadow:0 26px 70px rgba(0,0,0,.66), inset 0 1px 0 rgba(255,255,255,.05)}
+  /* 原来这里挂着 —— 视觉上是空的，但 Chromium 照样会为此
+     分配一层背景滤镜图层并做一次背景回读。已经删掉。 */
+  /* 四角装饰：细角标，galgame 框的典型记号 */
+  #dlg .d-frame::before,#dlg .d-frame::after{content:"";position:absolute;width:22px;height:22px;
+    border:1px solid rgba(232,192,138,.5);pointer-events:none}
+  #dlg .d-frame::before{left:9px;top:9px;border-right:0;border-bottom:0;border-radius:5px 0 0 0}
+  #dlg .d-frame::after{right:9px;bottom:9px;border-left:0;border-top:0;border-radius:0 0 5px 0}
+  /* 名牌：斜切，压在框的左上角外面 */
+  #dlg .d-name{position:absolute;left:26px;top:-15px;
+    padding:5px 22px 6px;border-radius:9px 9px 3px 3px;
+    background:linear-gradient(120deg,#2a5b3d,#1a4029);
+    border:1px solid rgba(126,231,135,.36);border-bottom:0;
+    font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:13.5px;letter-spacing:.26em;color:#c8f4d8;
+    box-shadow:0 -4px 18px rgba(0,0,0,.4)}
+  #dlg .d-name i{display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:#7ee787;margin-right:9px;vertical-align:1px;
+    box-shadow:0 0 8px #7ee787;font-style:normal}
+  /* 类别标签 */
+  #dlg .d-tag{font-size:10.5px;letter-spacing:.44em;color:#e8c08a;opacity:.62;margin-bottom:9px}
+  /* 正文 */
+  #dlg .d-text{font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:19px;line-height:1.78;letter-spacing:.035em;color:#e8fbf0;
+    min-height:2.6em;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+  #dlg .d-text .cur{display:inline-block;width:9px;height:19px;vertical-align:-3px;
+    background:#7ee787;margin-left:3px;animation:blink .7s steps(1) infinite}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  /* 右下：继续指示 + 行动提示 */
+  #dlg .d-next{position:absolute;right:26px;bottom:16px;color:#7ee787;font-size:13px;
+    animation:bobY 1.15s ease-in-out infinite;opacity:.85}
+  @keyframes bobY{0%,100%{transform:translateY(0);opacity:.45}50%{transform:translateY(3px);opacity:1}}
+  #dlg .d-cta{position:absolute;right:52px;bottom:18px;font-size:11.5px;letter-spacing:.2em;
+    color:#e8c08a;opacity:.66}
+  #dlg:hover .d-frame{border-color:rgba(126,231,135,.4);
+    box-shadow:0 26px 70px rgba(0,0,0,.7), 0 0 0 1px rgba(126,231,135,.16), inset 0 1px 0 rgba(255,255,255,.07)}
+  /* 进度：这一轮里第几条 */
+  /* ============ 直接输入行 ============
+     这是整个改造的核心：把"记录"从 6 步压到 1 步。
+     原来要点开面板→找记录区→点输入框→打字→保存；现在看着桌面直接打字回车。 */
+  #dlg .d-in{display:none;align-items:center;gap:10px;margin-top:14px;
+    padding:9px 14px;border-radius:9px;
+    background:rgba(4,10,7,.72);border:1px solid rgba(126,231,135,.26)}
+  #dlg.wants .d-in{display:flex}
+  #dlg .d-caret{color:#7ee787;font-size:12px;opacity:.75}
+  #dlg .d-hint{flex:1;font-size:15px;letter-spacing:.02em;color:#a9d6bd}
+  #dlg .d-key{flex:0 0 auto;font-size:10.5px;letter-spacing:.14em;color:#e8c08a;opacity:.6;
+    border:1px solid rgba(232,192,138,.34);border-radius:6px;padding:3px 8px}
+  #dlg:hover .d-key{opacity:.95;border-color:rgba(232,192,138,.66)}
+  /* 降级路径：壁纸收不到键盘焦点时（Lively 没放行输入），一键去面板里写 */
+  #dlg .d-fallback,#d-fallback{background:transparent;border:1px solid rgba(232,192,138,.42);
+    color:#e8c08a;font-size:11px;letter-spacing:.1em;padding:4px 10px;border-radius:7px;
+    cursor:pointer;opacity:.8;flex:0 0 auto}
+  #d-fallback:hover{opacity:1;border-color:rgba(232,192,138,.8)}
+  #dlg .d-in:focus-within{border-color:rgba(126,231,135,.6);
+    box-shadow:0 0 0 3px rgba(126,231,135,.16)}
+  /* 输入中：隐藏"点这里打开面板"，避免和打字抢注意力 */
+  #dlg.wants .d-cta{display:none}
+  /* 保存成功的反馈条 */
+  #dlg .d-ok{display:none;margin-top:12px;font-size:12.5px;letter-spacing:.06em;color:#7ee787}
+  #dlg.saved .d-ok{display:block}
+
+  #dlg .d-dots{position:absolute;left:34px;bottom:15px;display:flex;gap:6px}
+  #dlg .d-dots i{width:5px;height:5px;border-radius:50%;background:#7ee787;opacity:.22}
+  #dlg .d-dots i.on{opacity:.85}
+
+  /* ============ 落款：常驻，一眼可见 ============ */
+  /* ★ 落款从右上挪到左上：舞台整体上移后，日期文字（跟着舞台居中）正好压在落款上。
+     桌面图标只占最左一列（约 4.5vw），所以从 6vw 起排不会打架。 */
+  #sign{position:absolute;top:34px;left:6vw;text-align:left;pointer-events:none;
+    font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif}
+  #sign .s-rule{width:44px;height:1px;background:#e8c08a;opacity:.34;margin:0 0 12px}
+  #sign .s-main{font-size:14.5px;letter-spacing:.34em;color:#e8c08a;opacity:.72}
+  #sign .s-sub{margin-top:7px;font-size:10.5px;letter-spacing:.26em;color:#8fb3a3;opacity:.6}
+  #sign .s-mono{margin-top:5px;font-family:Consolas,monospace;font-size:9.5px;
+    letter-spacing:.12em;color:#7ee787;opacity:.34}
+
+  /* ============ 开场标题卡：壁纸每次加载出现一次 ============ */
+  #intro{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:0;pointer-events:none;
+    background:radial-gradient(60% 60% at 50% 50%, rgba(4,10,7,.86), rgba(3,7,5,.97));
+    opacity:1}
+  /* 同样只在 .off 上写过渡：移除是瞬时可见，加上才渐隐 */
+  #intro.off{opacity:0;transition:opacity 1.4s ease}
+  #intro .i-title{font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:44px;letter-spacing:.62em;color:#e8fbf0;text-indent:.62em;
+    text-shadow:0 0 44px rgba(126,231,135,.35)}
+  #intro .i-sub{margin-top:16px;font-size:12.5px;letter-spacing:.66em;text-indent:.66em;
+    color:#e8c08a;opacity:.72}
+  #intro .i-rule{width:120px;height:1px;margin:38px 0 34px;
+    background:linear-gradient(90deg,transparent,rgba(232,192,138,.7),transparent)}
+  #intro .i-by{font-size:10.5px;letter-spacing:.42em;text-indent:.42em;color:#8fb3a3;opacity:.7}
+  #intro .i-name{margin-top:14px;font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+    font-size:27px;letter-spacing:.46em;text-indent:.46em;color:#e8fbf0}
+  #intro .i-handle{margin-top:14px;font-size:10.5px;letter-spacing:.3em;text-indent:.3em;
+    color:#7ee787;opacity:.5}
+
+  /* ============ 定格阶梯抖动（曲目切换）============
+     参考 motion-web 的 toy-flipbook：不用淡入淡出，而是像翻页一样硬切。
+     steps() 让每段都不插值 —— 这是"停格"质感的来源。 */
+  @keyframes flipIn{
+    0%{transform:translateY(-7px);opacity:0}
+    20%{transform:translateY(0);opacity:1}
+    40%{transform:translateY(-2px)}
+    60%{transform:translateY(0)}
+    80%{transform:translateY(-1px)}
+    100%{transform:translateY(0)}
+  }
+  #setlist li.flip{animation:flipIn .42s steps(1,end) 1}
+
+  /* ============ 深夜模式（1:00 - 5:00）============
+     整场只剩一束追光打在宠物身上，其余全部退下去。
+     这是"陪伴"最强的时刻，也和熬夜提醒是同一件事的两种表达。 */
+  html[data-late="1"] #screen{opacity:.30;filter:saturate(.4) brightness(.7)}
+  html[data-late="1"] #setlist{opacity:.34}
+  html[data-late="1"] #sign{opacity:.45}
+  html[data-late="1"] #floorwash{opacity:.4}
+  html[data-late="1"] .orb{opacity:.22}
+  html[data-late="1"] .beam{opacity:.5}
+  html[data-late="1"] #meta{opacity:.55}
+  /* 追光：只有宠物脚下这一圈亮着 */
+  #spot{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);
+    width:calc(var(--pet,330px) * 2.1);height:calc(var(--pet,330px) * 1.5);
+    pointer-events:none;opacity:0;z-index:3;
+    background:radial-gradient(48% 46% at 50% 52%, rgba(255,240,205,.22) 0%, rgba(255,240,205,.06) 44%, transparent 74%);
+    transition:opacity 2.4s ease}
+  html[data-late="1"] #spot{opacity:1}
+
+  /* ============ 跟着你按键的小键盘 ============
+     仿 Bongo Cat 那一类桌宠：你按什么，它跟着按什么。
+     位置在左下（图标列之后、对话框之前），不和任何东西打架。 */
+  /* 按键气泡：字母/数字之外的真实按键（Space / Enter / Ctrl+Shift+S）在这里显示。
+     偷师自白凝冰桌宠 —— "数字和 A-Z 点亮键帽，其他物理键在气泡里说清楚"。 */
+  #kbd-bub{position:absolute;left:5vw;bottom:calc(74px + 118px);z-index:9;
+    padding:5px 13px;border-radius:9px;pointer-events:none;
+    background:rgba(8,18,13,.94);border:1px solid rgba(126,231,135,.34);
+    color:#c8f4d8;font-family:Consolas,monospace;font-size:12.5px;letter-spacing:.04em;
+    box-shadow:0 10px 28px rgba(0,0,0,.6);
+    opacity:0;transform:translateY(4px);transition:opacity .16s ease, transform .16s ease}
+  #kbd-bub.on{opacity:1;transform:none}
+  #kbd-bub b{color:#7ee787;font-weight:600}
+  /* ↑ 这里原来有一份上上版的 .kb-key 死代码，它的 overflow:hidden 把轴体柱整个裁掉了。
+     已删除 —— 教训：同名选择器残留比没有更危险，因为它只覆盖一部分属性。 */
+
+  /* ============ 宠物脚下的键盘 ============
+     仿 Bongo Cat：键盘在宠物正下方，宠物趴在它后面，两只爪子在键上按。
+     要点是"手要动，不只是键要亮" —— 只亮键帽看起来像仪表盘，不像在打字。 */
+  /* bottom 从 -104 改到 -166：原来键盘把宠物的脸整个挡住了。
+     Bongo Cat 那种构图里，你是能看见猫的脸在键盘上方的。 */
+  /* 宠物站在键盘上：键盘从宠物脚下往前铺开。
+     perspective + rotateX 做出"平放在桌面上、从正面斜看"的立体感。 */
+  /* bottom = -(宠物探出的高度) - (键盘投影高度)，让键盘上沿正好接到宠物脚下 */
+  /* ★ 位置全部跟着 --pet 缩放。
+     不能写死像素 —— 预览用默认 300，而 Lively 里 petSize=380，
+     写死的话两边差 80px，"脚踩在键盘上"就散了。
+     公式：键盘上沿 = 宠物脚底（-pet*0.34）；键盘下沿 = 脚底 - 投影高度(~109px)。 */
+  #petdeck{position:absolute;left:50%;
+    bottom:calc(var(--pet,300px) * var(--pet-oh) * -1 - var(--kbd-h,74px));
+    transform:translateX(-50%);
+    width:calc(var(--pet,300px) * 1.46);
+    z-index:6;perspective:900px;perspective-origin:50% 0%}
+  /* ============ 立体机械键盘 ============
+     不用 WebGL：perspective + rotateX 把键盘放平，键帽靠多层 box-shadow 做出"高度"。
+     按下时键帽下沉（阴影收掉）—— 这是机械键盘手感的关键，不是单纯变色。 */
+  #kbd{position:relative;z-index:2;transform-style:preserve-3d;
+    transform:rotateX(41deg);
+    padding:11px 12px 34px;border-radius:13px;
+    /* 机壳：上沿受光、下沿背光，做出厚度 */
+    /* 机壳：三层阴影叠出厚度，内阴影做出"键区凹陷进机壳"的层次 */
+    background:linear-gradient(178deg,#1a2f23 0%,#0f2018 44%,#06110b 100%);
+    box-shadow:
+      0 13px 0 #060e0a,
+      0 22px 0 #040a07,
+      0 46px 74px rgba(0,0,0,.84),
+      0 8px 26px rgba(0,0,0,.55),
+      inset 0 3px 0 rgba(255,255,255,.11),
+      inset 0 -4px 10px rgba(0,0,0,.62),
+      inset 0 12px 22px rgba(0,0,0,.34);
+    border:1px solid rgba(126,231,135,.13)}
+  /* 壳体倒角：上沿一条细高光 */
+  #kbd::before{content:"";position:absolute;left:10px;right:10px;top:3px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(126,231,135,.42),transparent)}
+  /* RGB 底光：机械键盘的标志性元素 */
+  #kbd::after{content:"";position:absolute;left:6%;right:6%;bottom:-19px;height:24px;
+    border-radius:50%;pointer-events:none;
+    background:radial-gradient(50% 100% at 50% 0%, rgba(126,231,135,.42), transparent 72%);
+    filter:blur(7px)}
+  /* 左右分区：宠物左脚踏左半、右脚踏右半，中间一条分隔线把这件事说清楚 */
+  .kb-half{position:absolute;top:12px;bottom:15px;width:1px;z-index:3;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(232,192,138,.28),transparent)}
+  .kb-half.l{left:50%}
+  .kb-half.r{left:50%}
+  /* 行距要留够 —— 键帽下面挂着 8px 的"轴体高度"，间距不够就会叠在一起 */
+  /* 行距要够 —— 下面挂着 16px 的轴体柱 */
+  .kb-row{display:flex;gap:4.5px;margin-bottom:23px}
+  /* TKL 分区间隔：占宽度但不画键帽 */
+  .kb-gap{flex:1 1 0;height:38px}
+  .kb-row:last-child{margin-bottom:0}
+  /* 键帽：顶面渐变 + 下凹 + 侧壁 + 投影，四层叠出"有高度" */
+  /* ★ 键帽高度夸张化。
+     原来侧壁只有 3px —— 在 rotateX(41°) 下纵向还会再压到 ~75%，
+     实拍里根本看不出按下去。现在侧壁 9px（轴体行程），按下时收到 0。
+     五层阴影：轴体柱 → 侧壁 → 投影 → 顶面高光 → 键帽下凹 */
+  .kb-key{flex:1 1 0;height:38px;border-radius:9px 9px 5px 5px;position:relative;box-sizing:border-box;
+    background:linear-gradient(180deg,#33503f 0%,#22392b 48%,#172a1f 100%);
+    color:#a8cfb8;font-size:11px;line-height:37px;text-align:center;
+    font-family:Consolas,monospace;letter-spacing:0;
+    overflow:visible;   /* 必须显式写：轴体柱挂在键帽外面，被裁掉就前功尽弃 */
+    border:1px solid rgba(126,231,135,.11);
+    box-shadow:
+      0 30px 16px rgba(0,0,0,.66),
+      inset 0 1.5px 0 rgba(255,255,255,.17),
+      inset 0 -5px 6px rgba(0,0,0,.5);
+    transition:transform .055s ease, box-shadow .07s ease,
+      background .07s ease, color .07s ease}
+  /* ★ 轴体柱 —— 这才是"高度"的真正来源。
+     原来靠两层纯色 box-shadow(0 22px 0 #0b1a12)撑着，可那个颜色和机壳底色 #0b1712
+     几乎一模一样，渲染出来是一坨，等于白做。现在换成伪元素 + 渐变：
+     柱身有侧面受光、有边框高光、底部有投影 —— 一眼能看出是个立着的轴。
+     按下时 keycap 下沉 22px（=柱高），柱身 scaleY 收到 0，
+     柱顶正好落到机壳面上 —— 这是真实轴体的行程几何，不是换个颜色糊弄。 */
+  .kb-key::before{content:"";position:absolute;left:19%;right:19%;top:100%;height:22px;
+    background:linear-gradient(180deg,#2a4433 0%,#1b2f22 46%,#0e1c14 100%);
+    border-left:1px solid rgba(126,231,135,.15);
+    border-right:1px solid rgba(126,231,135,.15);
+    border-radius:0 0 4px 4px;
+    box-shadow:0 6px 11px rgba(0,0,0,.62), inset 0 -5px 6px rgba(0,0,0,.5);
+    transform-origin:50% 0%;transform:scaleY(1);
+    transition:transform .055s ease}
+  /* 按下：键帽沉下去，侧壁消失 —— 真正的"按下"是高度变化，不是变色 */
+  /* 按下：整顶到底（translateY 9px = 轴体行程），侧壁阴影同时收掉 */
+  .kb-key.on{
+    transform:translateY(22px);
+    background:linear-gradient(180deg,#b6ffc9 0%,#7ce8a3 58%,#54cf86 100%);
+    color:#03110a;
+    box-shadow:
+      0 2px 5px rgba(0,0,0,.72),
+      0 0 24px rgba(126,231,135,.95),
+      0 0 46px rgba(126,231,135,.45),
+      inset 0 1px 0 rgba(255,255,255,.6),
+      inset 0 -2px 3px rgba(0,0,0,.2)}
+  /* 行程走完：柱身收平，柱顶落到机壳面 */
+  .kb-key.on::before{transform:scaleY(0)}
+  /* 修饰键：暖色键帽（和曲目牌、落款同一套色） */
+  .kb-key.mod{background:linear-gradient(180deg,#4a3d29 0%,#332a1b 48%,#241d12 100%);
+    color:#c9a877;font-size:8.5px}
+  .kb-key.mod.on{background:linear-gradient(180deg,#f7ddb0 0%,#dfb87c 60%,#c99f61 100%);
+    color:#1a1206;box-shadow:0 0 0 #0a1810, 0 1px 1px rgba(0,0,0,.5),
+      0 0 18px rgba(232,192,138,.75), inset 0 1px 0 rgba(255,255,255,.5)}
+
+
+  #grain{position:absolute;inset:0;pointer-events:none;opacity:.13;will-change:auto;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.55'/></svg>")}
+
+  /* ============ 护屏：活动分级 ============
+     这块屏是 BOE NE160QDM-NYM（IPS），烧屏不是主要风险 ——
+     真正折寿的是**发热**和**背光时长**。
+     所以不用的时候做三件事：降帧（perf.js）、压暗、停 CSS 动画。
+     鼠标一动立刻恢复，感知不到延迟。 */
+  #dim{position:absolute;inset:0;pointer-events:none;z-index:70;
+    background:#04070a;opacity:0;transition:opacity 2.6s ease}
+  html[data-lvl="idle"] #dim{opacity:.14}
+  html[data-lvl="away"] #dim{opacity:.60}
+  /* away：合成器别再跑了。静止的一帧可以被复用，几乎不耗 GPU。 */
+  html[data-lvl="away"] .o1,html[data-lvl="away"] .o2,
+  html[data-lvl="away"] .b1,html[data-lvl="away"] .b2,html[data-lvl="away"] .b3,
+  html[data-lvl="away"] #day-ring{animation-play-state:paused}
+  /* 像素漂移：只挪固定位置的静态文字（落款 / 日期），每 4 分钟换一个偏移。
+     长期压在同一片像素上对 IPS 的残影不利，挪 4px 肉眼完全看不出。
+     不挪宠物和键盘 —— 那会看出来在动。 */
+  #sign,#meta{translate:var(--sx,0px) var(--sy,0px)}
+</style></head>
+<body>
+<div id="scene">
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <div id="dlg" class="off">
+    <div class="d-frame">
+      <div class="d-name"><i></i><span id="d-who">Green</span></div>
+      <div class="d-tag" id="d-tag"></div>
+      <div class="d-text" id="d-text"></div>
+      <div class="d-dots" id="d-dots"></div>
+      <div class="d-cta" id="d-cta"></div>
+      <div class="d-in" id="d-in">
+        <span class="d-caret">&gt;</span>
+        <span class="d-hint" id="d-hint">点这里写一句</span>
+        <span class="d-key">新窗口</span>
+      </div>
+      <div class="d-ok" id="d-ok"></div>
+      <div class="d-next">▼</div>
+    </div>
+  </div>
+  <div id="sign">
+    <div class="s-rule"></div>
+    <div class="s-main">Green · 氢之卡比</div>
+    <div class="s-sub">氢之卡比 设计与实现</div>
+    <div class="s-mono">v1.0 · 2026</div>
+  </div>
+  <div id="floorwash"></div>
+  <div id="leftglow"></div>
+  <div id="cluster">
+  <div id="setlist">
+    <div class="sl-title">今 夜 曲 目</div>
+    <div class="sl-rule"></div>
+    <ul id="sl-list"></ul>
+    <div class="sl-en" id="sl-en"></div>
+  </div>
+  <div id="stage">
+    <div id="screen-wrap">
+      <div id="screen">
+        <img id="sc-a" alt=""><img id="sc-b" alt="">
+        <div class="scan"></div><div class="vig"></div>
+      </div>
+      <div id="beams"><div class="beam b1"></div><div class="beam b2"></div><div class="beam b3"></div></div>
+      <div id="haze"></div>
+      <div id="spot"></div>
+      <div id="floor"></div>
+      <svg id="day-ring" viewBox="0 0 200 200" aria-hidden="true"></svg>
+      <div id="pet-wrap"><div id="sprite"></div></div>
+      <div id="petdeck" aria-hidden="true">
+        <div id="kbd-bub"></div>
+        <div id="kbd">
+          <div class="kb-half l"></div>
+          <div class="kb-row" data-row="1"></div>
+          <div class="kb-row" data-row="2"></div>
+          <div class="kb-row" data-row="3"></div>
+          <div class="kb-row" data-row="4"></div>
+        </div>
+      </div>
+    </div>
+    <div id="meta">
+      <div class="date" id="wp-date">—</div>
+      <div class="cap" id="wp-cap">Khalil Fong</div>
+      <div class="line"><span class="dot"></span><span id="wp-line">—</span></div>
+      <div id="streak" aria-live="polite"></div>
+      <div id="spirit" aria-live="polite"></div>
+    </div>
+  </div>
+  </div>
+  <div id="intro">
+    <div class="i-title">GREEN</div>
+    <div class="i-sub">陪 伴 精 灵</div>
+    <div class="i-rule"></div>
+    <div class="i-by">DESIGNED &amp; BUILT BY</div>
+    <div class="i-name">曾 庆 源</div>
+    <div class="i-handle">氢之卡比 · 2026</div>
+  </div>
+  <div id="grain"></div>
+  <div id="dim"></div>
+</div>
+<script src="perf.js"></script>
+<script>
+  // ★ 不再硬锁 30fps。这块屏是 165Hz，锁 30 等于只用掉 1/5.5。
+  //   交给 perf.js 的活动分级：你在用 → 原生刷新率；离开 → 自动降到 1/12。
+  window.Perf.fpsCap = 0;
+  window.__petDprCap = 1.25;
+</script>
+<script src="theme.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="pet3d.js"></script>
+<script src="wallpaper.js"></script>
+</body></html>

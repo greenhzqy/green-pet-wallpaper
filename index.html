@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Green 陪伴精灵 · 氢之卡比</title>
+<link rel="stylesheet" href="style.css?v=95">
+</head>
+<body>
+<a class="skip-link" href="#stage">跳到主内容（跳过物件与侧栏）</a>
+<svg id="icon-sprite" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<filter id="rough" x="-12%" y="-12%" width="124%" height="124%">
+<feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="n"/>
+<feDisplacementMap in="SourceGraphic" in2="n" scale="1.15" xChannelSelector="R" yChannelSelector="G"/>
+</filter>
+<symbol id="i-radio" viewBox="0 0 24 24"><path d="M3.9 9.7h15.9c1 0 1.7.8 1.7 1.7v6.9c0 1-.8 1.7-1.7 1.7H3.9c-1 0-1.7-.8-1.7-1.7v-6.9c0-1 .7-1.7 1.7-1.7Z"/><path d="M6.7 9.4 16.3 5.3"/><circle cx="8.2" cy="14.9" r="2.4"/><path d="M13.6 13h4.6M13.6 15.4h4.6M13.6 17.7h3.1"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M5.7 3.8h11c1 0 1.8.8 1.8 1.8v12.9c0 1-.8 1.8-1.8 1.8h-11c-1 0-1.8-.8-1.8-1.8V5.6c0-1 .8-1.8 1.8-1.8Z"/><path d="M8.2 4v16.2"/><path d="M11.5 9.3h4.4M11.5 12.5h3"/></symbol>
+<symbol id="i-bottle" viewBox="0 0 24 24"><path d="M9.9 3.5h4.3v3c0 .9.3 1.2 1 1.9 1.3 1.3 2 2.6 2 4.5 0 3.5-2.5 6.3-5.3 6.3S6.6 16.4 6.6 12.9c0-1.9.7-3.2 2-4.5.7-.7 1-1 1-1.9v-3Z"/><path d="M6.8 13.2c1.6-.9 3 1 4.6.2 1.6-.9 3 1.1 4.5.2"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M12.2 4.2c4.4 0 8 2.9 8 6.4 0 3.6-3.6 6.4-8 6.4-1 0-1.9-.1-2.8-.4l-4 2 1.3-3.3c-1.5-1.2-2.5-2.8-2.5-4.7 0-3.5 3.6-6.4 8-6.4Z"/><circle cx="9.3" cy="10.5" r=".85" fill="currentColor" stroke="none"/><circle cx="12.3" cy="10.5" r=".85" fill="currentColor" stroke="none"/><circle cx="15.3" cy="10.5" r=".85" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-purse" viewBox="0 0 24 24"><path d="M7.2 8.7h9.6c2.4 0 4.3 1.9 4.3 4.2v3.8c0 2.3-1.9 4.2-4.3 4.2H7.2c-2.4 0-4.3-1.9-4.3-4.2v-3.8c0-2.3 1.9-4.2 4.3-4.2Z"/><path d="M7.7 8.5c1.8-2.9 5-4.7 7-4.1 1.6.5 1.3 2.5-.7 3.4"/><circle cx="16.3" cy="15" r="1.5"/></symbol>
+<symbol id="i-scroll" viewBox="0 0 24 24"><path d="M6.2 5.3c0-1 .8-1.8 1.8-1.8h11.2c-.9 0-1.6.8-1.6 1.7v13.2c0 1-.8 1.8-1.7 1.8H6.2"/><path d="M6.2 5.3c-.9 0-1.7.8-1.7 1.8v11.5c0 1 .8 1.8 1.7 1.8"/><path d="M8.9 8.9h5.8M8.9 12.1h4.1"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.1 14.5A8.3 8.3 0 1 1 10.2 4a6.7 6.7 0 0 0 9.9 10.5Z"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4.5 19.5l1.1-4.1L16.2 4.7a2.1 2.1 0 0 1 3 3L8.6 18.3l-4.1 1.2Z"/><path d="M14.5 6.4l3 3"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><rect x="4.2" y="4.3" width="15.6" height="15.5" rx="4"/><path d="M8.1 12.1l2.6 2.6 5.2-5.5"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.1"/><path d="M14.5 9.5c-.7-.8-1.5-1.2-2.5-1.2-1.4 0-2.5.9-2.5 2s1.1 1.7 2.6 2.1c1.5.4 2.6 1 2.6 2.1 0 1.2-1.2 2-2.7 2-1 0-2-.4-2.7-1.1"/><path d="M12 6.7v10.6"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M8.3 18.8h8.4c1.9 0 3.4-1.4 3.4-3.2 0-1.7-1.4-3.1-3.1-3.2-.4-2.2-2.4-3.9-4.7-3.9-2.5 0-4.6 1.9-4.8 4.5-1.4.3-2.4 1.5-2.4 2.9 0 1.6 1.4 2.9 3.2 2.9Z"/><path d="M12.1 4.4V2.6M17.3 6.2l1.3-1.3M6.9 6.2 5.6 4.9"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 3.5c-3.2 0-5.8 2.6-5.8 5.8v3.1c0 .8-.3 1.5-.9 2.1l-.9.9h15.2l-.9-.9c-.6-.6-.9-1.3-.9-2.1V9.3c0-3.2-2.6-5.8-5.8-5.8Z"/><path d="M9.8 18.5a2.3 2.3 0 0 0 4.4 0"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19.4s-7.1-4.2-7.1-8.9c0-2.3 1.9-4.2 4.2-4.2 1.2 0 2.3.6 2.9 1.6.6-1 1.7-1.6 2.9-1.6 2.3 0 4.2 1.9 4.2 4.2 0 4.7-7.1 8.9-7.1 8.9Z"/></symbol>
+<symbol id="i-jump" viewBox="0 0 24 24"><path d="M12 20.2V5.4"/><path d="M6.7 10.5 12 5.2l5.3 5.3"/></symbol>
+<symbol id="i-spin" viewBox="0 0 24 24"><path d="M19.6 12a7.6 7.6 0 1 1-2.5-5.6"/><path d="M19.9 3.8v4.3h-4.3"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.7v2.2M12 19.1v2.2M4.4 12H2.2M21.8 12h-2.2M6.6 6.6 5 5M19 19l-1.6-1.6M6.6 17.4 5 19M19 5l-1.6 1.6"/></symbol>
+<symbol id="i-dusk" viewBox="0 0 24 24"><path d="M3.7 17.3h16.6"/><path d="M7.5 17.3a4.5 4.5 0 0 1 9 0"/><path d="M12 6.3V4.2M5.7 8.5 4.3 7.1M18.3 8.5l1.4-1.4"/></symbol>
+<symbol id="i-night" viewBox="0 0 24 24"><path d="M19 13.8a7 7 0 1 1-8.7-8.6A5.7 5.7 0 0 0 19 13.8Z"/><path d="M17.6 4.2l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6.6-1.7Z"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.9" y="5.3" width="16.2" height="14.8" rx="3"/><path d="M3.9 9.6h16.2M8.2 3.5v3.5M15.8 3.5v3.5"/></symbol>
+<symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M9.4 3.7 11 8.4l4.7 1.6L11 11.6 9.4 16.3 7.8 11.6 3.1 10l4.7-1.6 1.6-4.7Z"/><path d="M17.8 14.4l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8.8-2.3Z"/></symbol>
+<symbol id="i-sound" viewBox="0 0 24 24"><path d="M4.7 9.5h3.2L12 5.8v12.4l-4.1-3.7H4.7c-.7 0-1.2-.5-1.2-1.2v-3.8c0-.7.5-1.2 1.2-1.2Z"/><path d="M15.3 9.3a3.8 3.8 0 0 1 0 5.4M18 6.7a7.5 7.5 0 0 1 0 10.6"/></symbol>
+<symbol id="i-mute" viewBox="0 0 24 24"><path d="M4.7 9.5h3.2L12 5.8v12.4l-4.1-3.7H4.7c-.7 0-1.2-.5-1.2-1.2v-3.8c0-.7.5-1.2 1.2-1.2Z"/><path d="M15.6 9.6 20.4 14.4M20.4 9.6 15.6 14.4"/></symbol>
+<symbol id="i-cmd" viewBox="0 0 24 24"><path d="M9.2 9.2V6.6a2.6 2.6 0 1 0-2.6 2.6h10.8a2.6 2.6 0 1 0-2.6-2.6v10.8a2.6 2.6 0 1 0 2.6-2.6H6.6a2.6 2.6 0 1 0 2.6 2.6V6.6"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20.3 4.1v4.6h-4.6"/></symbol>
+<symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M4.6 9V5.7c0-.6.5-1.1 1.1-1.1H9M15 4.6h3.3c.6 0 1.1.5 1.1 1.1V9M19.4 15v3.3c0 .6-.5 1.1-1.1 1.1H15M9 19.4H5.7c-.6 0-1.1-.5-1.1-1.1V15"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.6 12S6 6.4 12 6.4 21.4 12 21.4 12 18 17.6 12 17.6 2.6 12 2.6 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+<symbol id="i-paw" viewBox="0 0 24 24"><ellipse cx="8" cy="8" rx="1.9" ry="2.4"/><ellipse cx="16" cy="8" rx="1.9" ry="2.4"/><ellipse cx="5.2" cy="12.6" rx="1.7" ry="2.1"/><ellipse cx="18.8" cy="12.6" rx="1.7" ry="2.1"/><path d="M12 11.4c-2.6 0-4.6 2-4.6 4.3 0 1.7 1.4 2.6 3 2.4 1-.2 2.2-.2 3.2 0 1.6.2 3-.7 3-2.4 0-2.3-2-4.3-4.6-4.3Z"/></symbol>
+</defs></svg>
+
+<div id="ambient" aria-hidden="true">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <canvas id="fx"></canvas>
+</div>
+
+<div id="app">
+
+  <header id="topbar">
+    <div id="brand">
+      <span id="brand-dot"></span>
+      <span id="brand-name">Green</span>
+      <span id="mood-label">在线</span>
+      <button id="maker-mark" class="maker-mark" type="button" aria-haspopup="dialog" aria-controls="about-modal"
+        aria-label="关于 Green 陪伴精灵 · 作者 氢之卡比"
+        title="关于 Green · 作者 氢之卡比"><span class="mm-by" aria-hidden="true">by</span>氢之卡比</button>
+    </div>
+    <div id="clockbox">
+      <span id="clock">--:--:--</span>
+      <span id="date-line">—</span>
+    </div>
+    <div id="skyline">
+      <div class="lv-chip">
+        <span id="pet-name">Lv.<span id="pet-level">1</span></span>
+        <span class="xp-mini"><span id="pet-xpbar"></span></span>
+      </div>
+      <span id="pet-xptext"></span>
+    </div>
+    <div id="top-actions">
+      <span id="sleep-line">—</span>
+      <button id="sound-toggle" class="icon-btn" title="音效开关" data-sfx="none"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sound"/></svg></button>
+      <button id="cmdk-hint" class="kbd-hint" title="命令面板"><svg class="ico" viewBox="0 0 24 24"><use href="#i-cmd"/></svg><kbd>K</kbd></button>
+      <button id="weekly-entry" class="whisper-pill" title="本周例行">
+        <span class="dot"></span><span id="weekly-label">本周例行</span><span id="weekly-status">—</span>
+      </button>
+    </div>
+    <div id="day-arc" aria-hidden="true"></div>
+  </header>
+
+  <aside id="sidebar">
+    <div class="side-block">
+      <div class="side-title">角色</div>
+      <div id="pet-class"></div>
+      <div id="pet-stats"></div>
+      <div id="stats-radar" aria-hidden="true"></div>
+      <div id="hero-chips"></div>
+    </div>
+    <div class="side-block" id="side-motto"><div id="pet-slogan"></div></div>
+    <div class="side-block side-quiet">
+      <div class="qrow"><span id="mini-clock"></span><span id="companion-time">—</span></div>
+    </div>
+    <div class="side-block">
+      <div class="side-title">陪伴热力 · 近 10 周</div>
+      <div id="heat"></div>
+      <div id="heat-legend"><span>少</span><i class="hl h0"></i><i class="hl h1"></i><i class="hl h2"></i><i class="hl h3"></i><i class="hl h4"></i><span>多</span></div>
+    </div>
+  </aside>
+
+  <main id="stage">
+    <div id="ambient-line">
+      <span id="fc-focus">—</span><i>·</i><span id="fc-doing">—</span>
+    </div>
+
+    <div id="bubble"><span id="quote">加载中…</span></div>
+
+    <nav id="orbs" aria-label="功能入口">
+    <button class="orb-btn" data-panel="p-brief" data-title="今日简讯" data-name="情报收音机 · 今天筛过的 20 条">
+      <svg class="ico" viewBox="0 0 24 24"><use href="#i-radio"/></svg><i class="ob-val" id="card-brief-val">—</i>
+    </button>
+    <button class="orb-btn" data-panel="p-log" data-title="记录" data-name="成长手账 · 睡眠 / 随记 / 待办">
+      <svg class="ico" viewBox="0 0 24 24"><use href="#i-book"/></svg><i class="ob-val" id="card-log-val">—</i>
+    </button>
+    <button class="orb-btn" data-panel="p-env" data-title="环境" data-name="窗边天气瓶 · 余额 / 天气 / 闹钟">
+      <svg class="ico" viewBox="0 0 24 24"><use href="#i-bottle"/></svg><i class="ob-val" id="card-env-val">—</i>
+    </button>
+    <button class="orb-btn" data-panel="p-chat" data-title="聊聊" data-name="对讲机 · 接 DSH 大脑">
+      <svg class="ico" viewBox="0 0 24 24"><use href="#i-chat"/></svg><i class="ob-val">DSH</i>
+    </button>
+    <button class="orb-btn" data-target="ledger-entry" data-title="副业账本" data-name="钱袋子 · 四渠道流水">
+      <svg class="ico" viewBox="0 0 24 24"><use href="#i-purse"/></svg><i class="ob-val" id="card-ledger-val">—</i>
+    </button>
+    <button class="orb-btn" data-target="task-entry" data-title="任务书" data-name="待办卷轴 · 六步详解 + 计时">
+      <svg class="ico" viewBox="0 0 24 24"><use href="#i-scroll"/></svg><i class="ob-val" id="card-task-val">—</i>
+    </button>
+  </nav>
+    <div id="pet-wrap">
+      <div id="ground"></div>
+      <svg id="ring" viewBox="0 0 240 240" aria-hidden="true">
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7ee787"/>
+            <stop offset="0.5" stop-color="#4ade80"/>
+            <stop offset="1" stop-color="#22d3ee"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="120" cy="120" r="104"/>
+        <circle class="ring-fg" id="ring-fg" cx="120" cy="120" r="104"/>
+      </svg>
+
+      <div id="sprite" class="sprite" title="摸摸我">
+        <svg viewBox="0 0 220 200" id="pet-svg">
+          <defs>
+            <linearGradient id="bodyG" x1="0.32" y1="0" x2="0.68" y2="1">
+              <stop offset="0" stop-color="#A9F2BE"/><stop offset="0.38" stop-color="#74E094"/>
+              <stop offset="0.78" stop-color="#4CC677"/><stop offset="1" stop-color="#38A862"/>
+            </linearGradient>
+            <linearGradient id="limbG" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0" stop-color="#7FE49C"/><stop offset="1" stop-color="#3FAE6A"/>
+            </linearGradient>
+            <linearGradient id="footG" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0" stop-color="#63D68C"/><stop offset="1" stop-color="#2E9A5C"/>
+            </linearGradient>
+            <radialGradient id="gloss" cx="0.5" cy="0.14" r="0.62">
+              <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/>
+              <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.12"/>
+              <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="auraG" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#7ee787" stop-opacity="0.26"/><stop offset="1" stop-color="#7ee787" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="blushG" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#FF8FAD" stop-opacity="0.78"/><stop offset="1" stop-color="#FF8FAD" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.4"/></filter>
+            <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <circle cx="110" cy="110" r="92" fill="url(#auraG)"/>
+          <g id="g-shadow"><ellipse cx="110" cy="181" rx="52" ry="8" fill="#04140a" opacity="0.42" filter="url(#soft)"/></g>
+
+          <g id="g-root">
+            <g id="g-orbit" opacity="0.5">
+              <ellipse cx="110" cy="110" rx="86" ry="28" fill="none" stroke="#58d37a" stroke-width="1.6" opacity="0.4"/>
+              <circle id="electron" cx="196" cy="110" r="4" fill="#ddffe8" filter="url(#glow)"/>
+            </g>
+
+            <g id="g-legL"><ellipse cx="84" cy="166" rx="23" ry="15" fill="url(#footG)" transform="rotate(-6 84 166)"/></g>
+            <g id="g-legR"><ellipse cx="136" cy="166" rx="23" ry="15" fill="url(#footG)" transform="rotate(6 136 166)"/></g>
+
+            <g id="g-body">
+              <circle id="bodyShape" cx="110" cy="106" r="64" fill="url(#bodyG)"/>
+              <circle id="bodyLight" cx="110" cy="106" r="64" fill="url(#gloss)"/>
+              <g id="g-face">
+                <ellipse id="blushL" cx="72" cy="126" rx="14" ry="8.5" fill="url(#blushG)"/>
+                <ellipse id="blushR" cx="148" cy="126" rx="14" ry="8.5" fill="url(#blushG)"/>
+
+                <g id="g-eyes">
+                  <g id="eyeL"><g id="pupilL">
+                    <ellipse cx="91" cy="94" rx="10.5" ry="17" fill="#22223C"/>
+                    <ellipse cx="87.4" cy="86" rx="3.4" ry="4.6" fill="#FFFFFF" opacity="0.95"/>
+                    <ellipse cx="93.6" cy="104" rx="1.9" ry="2.6" fill="#8FE8FF" opacity="0.5"/>
+                  </g></g>
+                  <g id="eyeR"><g id="pupilR">
+                    <ellipse cx="129" cy="94" rx="10.5" ry="17" fill="#22223C"/>
+                    <ellipse cx="125.4" cy="86" rx="3.4" ry="4.6" fill="#FFFFFF" opacity="0.95"/>
+                    <ellipse cx="131.6" cy="104" rx="1.9" ry="2.6" fill="#8FE8FF" opacity="0.5"/>
+                  </g></g>
+                </g>
+                <g id="eyesHappy">
+                  <path d="M80 98 Q91 84 102 98" stroke="#22223C" stroke-width="5.4" fill="none" stroke-linecap="round"/>
+                  <path d="M118 98 Q129 84 140 98" stroke="#22223C" stroke-width="5.4" fill="none" stroke-linecap="round"/>
+                </g>
+                <g id="eyesSurprised">
+                  <ellipse cx="91" cy="94" rx="11.5" ry="19" fill="#22223C"/>
+                  <ellipse cx="129" cy="94" rx="11.5" ry="19" fill="#22223C"/>
+                  <ellipse cx="87.6" cy="85" rx="3.6" ry="5" fill="#FFFFFF" opacity="0.95"/>
+                  <ellipse cx="125.6" cy="85" rx="3.6" ry="5" fill="#FFFFFF" opacity="0.95"/>
+                </g>
+                <g id="eyesClosed">
+                  <path d="M80 96 Q91 106 102 96" stroke="#22223C" stroke-width="4.8" fill="none" stroke-linecap="round"/>
+                  <path d="M118 96 Q129 106 140 96" stroke="#22223C" stroke-width="4.8" fill="none" stroke-linecap="round"/>
+                </g>
+                <g id="eyesSad">
+                  <path d="M80 92 Q91 84 102 92" stroke="#22223C" stroke-width="4.8" fill="none" stroke-linecap="round"/>
+                  <path d="M118 92 Q129 84 140 92" stroke="#22223C" stroke-width="4.8" fill="none" stroke-linecap="round"/>
+                </g>
+                <g id="eyesFocus">
+                  <ellipse cx="91" cy="96" rx="10.5" ry="13" fill="#22223C"/>
+                  <ellipse cx="129" cy="96" rx="10.5" ry="13" fill="#22223C"/>
+                  <path d="M79 78 L103 84" stroke="#22223C" stroke-width="4" stroke-linecap="round"/>
+                  <path d="M141 78 L117 84" stroke="#22223C" stroke-width="4" stroke-linecap="round"/>
+                </g>
+
+                <g id="g-mouths">
+                  <path id="m-smile" d="M103 131 Q110 138 117 131" stroke="#22223C" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+                  <path id="m-open" d="M99 128 Q110 149 121 128 Z" fill="#3A1E2A"/>
+                  <ellipse id="m-oh" cx="110" cy="133" rx="6" ry="7.5" fill="#3A1E2A"/>
+                  <path id="m-flat" d="M103 132 L117 132" stroke="#22223C" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+                  <path id="m-frown" d="M103 136 Q110 129 117 136" stroke="#22223C" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+                  <path id="m-w" d="M102 130 q4 5.5 8 0 q4 5.5 8 0" stroke="#22223C" stroke-width="3" fill="none" stroke-linecap="round"/>
+                  <ellipse id="m-puff" cx="110" cy="132" rx="17" ry="13" fill="#4CC677" opacity="0"/>
+                </g>
+              </g>
+            </g>
+
+            <g id="g-armL"><ellipse cx="48" cy="128" rx="13" ry="17" fill="url(#limbG)" transform="rotate(14 48 128)"/></g>
+            <g id="g-armR"><ellipse cx="172" cy="128" rx="13" ry="17" fill="url(#limbG)" transform="rotate(-14 172 128)"/></g>
+
+            <g id="g-earL"><circle cx="34" cy="76" r="5" fill="#CFF7DC" filter="url(#glow)" opacity="0.85"/></g>
+            <g id="g-earR"><circle cx="186" cy="76" r="5" fill="#CFF7DC" filter="url(#glow)" opacity="0.85"/></g>
+          </g>
+        </svg>
+      </div>
+
+      <div id="zzz"><span>z</span><span>z</span><span>z</span></div>
+    </div>
+  </main>
+
+  <aside id="context">
+    <div id="drawer-head">
+      <span id="ctx-title"></span>
+      <button id="drawer-close">✕</button>
+    </div>
+
+    <div class="dpanel is-on" id="p-brief"><div id="brief-list" role="status" aria-live="polite" aria-busy="true">加载中…</div></div>
+
+    <div class="dpanel" id="p-chat">
+      <div id="chat-log">—</div>
+      <div class="row-inline">
+        <input id="chat-input" placeholder="跟 Green 说句话…（回车）">
+        <button id="chat-send">发送</button>
+      </div>
+    </div>
+
+    <div class="dpanel" id="p-log">
+      <div id="auto-draft" class="hidden"></div>
+      <div class="soft-block">
+        <div class="soft-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-moon"/></svg><span>睡眠</span></div>
+        <div id="sleep-list">—</div>
+        <div class="row-inline">
+          <input id="sleep-hours" placeholder="睡了几个小时" type="number" min="0" max="16" step="0.5">
+          <button id="sleep" class="ghost">记一下</button>
+        </div>
+      </div>
+      <div class="soft-block">
+        <div class="soft-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-pencil"/></svg><span>随记</span></div>
+        <div class="row-inline">
+          <input id="mood" placeholder="写一句今天的（回车）">
+          <button id="fit" class="ghost"><svg class="ico" viewBox="0 0 24 24"><use href="#i-paw"/></svg>练了</button>
+        </div>
+      </div>
+      <div class="soft-block">
+        <div class="soft-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg><span>待办</span></div>
+        <div id="todos">—</div>
+      </div>
+    </div>
+
+    <div class="dpanel" id="p-env">
+      <div class="soft-block">
+        <div class="soft-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-coin"/></svg><span>DeepSeek 余额</span></div>
+        <div id="balance-line">加载中…</div>
+        <div id="balance-sub">—</div>
+        <button id="bal-refresh" class="ghost">刷新</button>
+        <div id="key-row" class="row-inline" style="display:none;">
+          <input id="key-input" placeholder="粘贴 sk-... API key">
+          <button id="key-save">保存</button>
+        </div>
+      </div>
+      <div class="soft-block">
+        <div class="soft-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-cloud"/></svg><span>天气 · 闹钟</span></div>
+        <div id="weather-text">天气加载中…</div>
+        <div id="alarm-line">—</div>
+        <button id="voice-toggle" class="ghost"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sound"/></svg>语音开</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ 宠物身边的小物件（不是卡片，是物件） ============ -->
+
+  <footer id="statusbar">
+    <span id="status">● 精灵在线</span>
+    <span id="updated">—</span>
+    <span id="footer-motto">—</span>
+    <span id="version-tag" title="Green v1.0 · 2026-09-21">Green v1.0 · 氢之卡比</span>
+    <span class="spacer"></span>
+    <span id="hint">摸摸我 · 空格一起玩 · Esc 关面板</span>
+  </footer>
+
+</div>
+
+<div id="hidden-anchors" aria-hidden="true">
+  <button id="brief-toggle"></button>
+  <button id="chat-toggle"></button>
+  <button id="more-toggle"></button>
+  <button id="ledger-entry"></button>
+  <button id="task-entry"></button>
+  <i id="brief-cnt">—</i>
+</div>
+
+<div id="scrim" class="hidden"></div>
+
+<div id="ledger-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-purse"/></svg>副业账本</span>
+      <span id="ledger-total">—</span>
+      <button id="ledger-close">✕</button>
+    </div>
+    <div id="ledger-cards">—</div>
+    <div class="row-inline" id="ledger-form">
+      <select id="ledger-channel">
+        <option>工资</option><option>兼职</option><option>稿费</option><option>投资</option><option>其他</option>
+      </select>
+      <input id="ledger-amount" placeholder="金额（扣款填负）">
+      <input id="ledger-note" placeholder="备注">
+      <button id="ledger-save">记一笔</button>
+    </div>
+  </div>
+</div>
+
+<div id="task-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-scroll"/></svg><span id="task-title">—</span></span>
+      <button id="task-close">✕</button>
+    </div>
+    <div id="task-detail">—</div>
+    <div class="timer-row">
+      <span id="timer">30:00</span>
+      <button id="t-start" class="ghost">开始</button>
+      <button id="t-reset" class="ghost">重置</button>
+    </div>
+  </div>
+</div>
+
+<div id="weekly-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>本周例行</span>
+      <span id="weekly-progress">—</span>
+      <button id="weekly-close">✕</button>
+    </div>
+    <div id="weekly-q">—</div>
+    <input id="weekly-input" placeholder="回车下一题">
+    <div class="row-inline" style="margin-top:10px;">
+      <button id="weekly-prev" class="ghost">上一题</button>
+      <button id="weekly-next">下一题 / 提交</button>
+    </div>
+  </div>
+</div>
+
+<!-- 关于：点顶栏署名打开。启动动画是 .about-boot 的 keyframes，2 秒内结束 -->
+<div id="about-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="关于 Green 陪伴精灵">
+  <div class="modal-box about-box">
+    <div class="modal-head">
+      <span class="modal-title"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg>关于</span>
+      <button id="about-close" class="about-x" type="button" aria-label="关闭关于面板">✕</button>
+    </div>
+
+    <div class="about-boot" aria-hidden="true">
+      <span class="ab-glow"></span>
+      <svg class="ab-sigil" viewBox="0 0 64 64">
+        <path class="ab-orbit ab-o1" d="M6 32a26 10 0 1 0 52 0a26 10 0 1 0 -52 0" pathLength="100"/>
+        <path class="ab-orbit ab-o2" d="M6 32a26 10 0 1 0 52 0a26 10 0 1 0 -52 0" pathLength="100" transform="rotate(60 32 32)"/>
+        <path class="ab-orbit ab-o3" d="M6 32a26 10 0 1 0 52 0a26 10 0 1 0 -52 0" pathLength="100" transform="rotate(-60 32 32)"/>
+        <circle class="ab-core" cx="32" cy="32" r="4.8"/>
+      </svg>
+      <div class="ab-word">GREEN</div>
+      <div class="ab-sub">陪伴精灵</div>
+      <div class="ab-ver">v1.0</div>
+    </div>
+
+    <p class="ab-lead">一个住在你电脑里的绿色氢原子。它看得见你在忙什么，在你坐太久时递一句话，
+      把深水区的慢反馈翻译成你系统认得的快反馈。没有账号，没有上传，数据不出这台机器。</p>
+
+    <div class="ab-cols">
+      <section class="ab-sec">
+        <h2 class="ab-h">谁做的 · 什么时候</h2>
+        <p class="ab-sig">氢之卡比</p>
+        <p class="ab-p">2026 年 9 月，从一颗只会在屏幕上转圈的绿球开始。</p>
+      </section>
+
+      <section class="ab-sec">
+        <h2 class="ab-h">技术栈</h2>
+        <ul class="ab-list">
+          <li>零依赖 Node 服务 · server.js · 127.0.0.1:8765</li>
+          <li>three.js r160（UMD）+ 纯手写 CSS</li>
+          <li>没有一个前端框架，没有构建步骤</li>
+          <li>手绘 SVG 图标与滤镜；数据只躺在一个 7KB 的 state.json 里</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="ab-sec">
+      <h2 class="ab-h">设计原则</h2>
+      <ul class="ab-list ab-rules">
+        <li><b>不用 emoji</b> —— 每一枚图标都是自己画的线。</li>
+        <li><b>弹簧动效</b> —— 走 var(--spring) 的过冲曲线，不用 CSS 默认缓动。</li>
+        <li><b>无感陪伴</b> —— 不弹窗催你，只在你抬头的时候递一句。</li>
+        <li><b>过渡只写在隐藏态</b> —— 被节流的窗口里，过渡不推进，写反了元素会永远卡在半透明。</li>
+      </ul>
+    </section>
+
+    <div class="ab-foot">
+      <span class="ab-stamp">Green v1.0 · 2026-09-21 · 重庆</span>
+      <span class="ab-esc">按 Esc 关闭</span>
+      <button id="about-done" class="ghost" type="button">知道了</button>
+    </div>
+  </div>
+</div>
+
+<script src="perf.js?v=94" defer></script>
+<script src="theme.js?v=94" defer></script>
+<script src="sound.js?v=94" defer></script>
+<script src="fx.js?v=94" defer></script>
+<script src="app.js?v=94" defer></script>
+<script src="sprite.js?v=94" defer></script>
+<script src="vendor/three.min.js?v=94"></script>
+<script src="pet3d.js?v=94" defer></script>
+<script src="deck.js?v=94" defer></script>
+<script src="cmdk.js?v=94" defer></script>
+<script src="ui-extras.js?v=94" defer></script>
+<script src="atmosphere.js?v=94" defer></script>
+<script src="dayring.js?v=94" defer></script>
+<script src="motion.js?v=94" defer></script>
+<script src="states.js?v=94" defer></script>
+<script src="about.js?v=95" defer></script>
+<script>
+/* 深链定位：壁纸对话框点进来时带 ?focus=<选择器>@<第几个>
+   面板的数据是异步渲染的，所以要等元素出现再滚。 */
+(function () {
+  var m = /[?&]focus=([^&]*)/.exec(location.search);
+  if (!m) return;
+  var spec = decodeURIComponent(m[1]);
+  if (!spec) return;
+  var at = spec.lastIndexOf("@");
+  var sel = at > 0 ? spec.slice(0, at) : spec;
+  var idx = at > 0 ? parseInt(spec.slice(at + 1), 10) || 0 : 0;
+  var tries = 0;
+  var timer = setInterval(function () {
+    var els;
+    try { els = document.querySelectorAll(sel); } catch (e) { clearInterval(timer); return; }
+    if (els.length > idx) {
+      clearInterval(timer);
+      var el = els[idx];
+      try { el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) { el.scrollIntoView(); }
+      el.classList.add("focus-hit");
+      setTimeout(function () { el.classList.remove("focus-hit"); }, 3600);
+      // 深链指向输入框时顺便聚焦 —— 壁纸的"打不了字就开面板"降级路径靠这个
+      try {
+        if (/^(INPUT|TEXTAREA)$/.test(el.tagName)) {
+          el.focus({ preventScroll: true });
+          if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length);
+        }
+      } catch (e) {}
+    } else if (++tries > 48) { clearInterval(timer); }
+  }, 250);
+})();
+</script>
+<script>
+/* 数据出口：记录只存在一个 7KB 的 state.json 里，必须有个备份入口。
+   放在状态栏最右 —— 低频但关键的操作不该占主界面。 */
+(function () {
+  var bar = document.getElementById("statusbar");
+  if (!bar) return;
+  var b = document.createElement("button");
+  b.id = "export-btn";
+  b.type = "button";
+  b.textContent = "导出备份";
+  b.title = "把记录导出到桌面（原始 JSON + 可读 Markdown）";
+  b.addEventListener("click", function () {
+    b.textContent = "导出中…";
+    b.disabled = true;
+    fetch("/export").then(function (r) { return r.json(); }).then(function (j) {
+      b.textContent = j && j.ok ? "已存到桌面 ✓" : "导出失败";
+    }).catch(function () { b.textContent = "导出失败"; }).then(function () {
+      b.disabled = false;
+      setTimeout(function () { b.textContent = "导出备份"; }, 2800);
+    });
+  });
+  bar.appendChild(b);
+})();
+</script>
+</body>
+</html>

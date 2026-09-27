@@ -1,0 +1,1084 @@
+/* ============================================================
+   Green · 桌面视觉系统 v40
+   从"手机单列"改为"桌面三栏工作台"：
+     顶栏（我是谁/现在几点）│ 左栏（你是谁）│ 中央（她在哪）│ 右栏（发生什么）│ 状态栏
+   宽屏常驻三栏；窗口收窄时右栏降级为覆盖式抽屉。
+   ============================================================ */
+
+:root{
+  --bg:#050a08;
+  --panel:rgba(255,255,255,.028);
+  --panel-2:rgba(255,255,255,.055);
+  --line:rgba(255,255,255,.075);
+  --line-2:rgba(255,255,255,.12);
+  --ink:#e9fff2;
+  --ink-2:#a9c9b8;
+  --ink-3:#6d8a7c;
+  --green:#7ee787;
+  --green-2:#4ade80;
+  --green-3:#22d3ee;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --rail-w:264px;
+  --ctx-w:344px;
+  --top-h:54px;
+  --bot-h:28px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+  font:400 13px/1.55 -apple-system,"Segoe UI Variable Text","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  user-select:none;letter-spacing:.01em;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.hidden{display:none !important}
+.spacer{flex:1}
+
+/* ---------------- 氛围 ---------------- */
+#ambient{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+#ambient::after{
+  content:"";position:absolute;inset:-30% -10% auto -10%;height:70%;
+  background:radial-gradient(60% 60% at 50% 0%,rgba(126,231,135,.13),transparent 70%);
+}
+.orb{position:absolute;border-radius:50%;filter:blur(56px);opacity:.42}
+.o1{width:420px;height:420px;left:-120px;top:-90px;background:radial-gradient(circle,#2fae63,transparent 70%);animation:drift1 30s var(--ease) infinite}
+.o2{width:380px;height:380px;right:-110px;top:18%;background:radial-gradient(circle,#1f8f7a,transparent 70%);animation:drift2 36s var(--ease) infinite}
+.o3{width:460px;height:460px;left:30%;bottom:-220px;background:radial-gradient(circle,#1c6f4a,transparent 70%);animation:drift3 42s var(--ease) infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(56px,44px) scale(1.12)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-48px,60px) scale(1.08)}}
+@keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(36px,-50px) scale(1.14)}}
+#fx{position:absolute;inset:0;width:100%;height:100%}
+
+/* ---------------- 桌面骨架 ---------------- */
+#app{
+  position:relative;z-index:1;height:100vh;
+  display:grid;
+  grid-template-columns:var(--rail-w) minmax(0,1fr) var(--ctx-w);
+  grid-template-rows:var(--top-h) minmax(0,1fr) var(--bot-h);
+  grid-template-areas:
+    "top    top    top"
+    "side   stage  ctx"
+    "status status status";
+}
+
+/* ---------------- 顶栏 ---------------- */
+#topbar{
+  grid-area:top;display:flex;align-items:center;gap:18px;
+  padding:0 16px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.035),transparent);
+  backdrop-filter:blur(18px);
+}
+#brand{display:flex;align-items:center;gap:9px;min-width:calc(var(--rail-w) - 32px)}
+#brand-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pulse 2.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.86)}}
+#brand-name{font-size:14px;font-weight:650;letter-spacing:.02em}
+#mood-label{
+  font-size:10.5px;color:var(--green);padding:1.5px 8px;border-radius:999px;
+  background:rgba(126,231,135,.12);border:1px solid rgba(126,231,135,.24);
+}
+#clockbox{display:flex;align-items:baseline;gap:10px}
+#clock{
+  font-size:21px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  background:linear-gradient(180deg,#fff,rgba(233,255,242,.68));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+#date-line{font-size:11px;color:var(--ink-3)}
+#skyline{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--ink-2)}
+#pet-name{font-weight:600;color:var(--ink)}
+#pet-xptext{color:var(--ink-3);font-variant-numeric:tabular-nums}
+#top-actions{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--ink-3)}
+#mini-clock,#companion-time{font-variant-numeric:tabular-nums}
+
+.whisper-pill{
+  display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;
+  background:var(--panel);border:1px solid var(--line);color:var(--ink-2);font-size:11.5px;
+  transition:transform .35s var(--spring),background .25s,border-color .25s;
+}
+.whisper-pill:hover{transform:translateY(-1px);background:var(--panel-2);border-color:rgba(126,231,135,.4)}
+.whisper-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-3)}
+.whisper-pill.pending .dot{background:var(--green);box-shadow:0 0 9px var(--green);animation:pulse 1.8s infinite}
+
+/* ---------------- 左栏 ---------------- */
+#sidebar{
+  grid-area:side;display:flex;flex-direction:column;gap:10px;
+  padding:14px;border-right:1px solid var(--line);
+  background:linear-gradient(180deg,var(--panel),transparent 60%);
+  overflow-y:auto;
+}
+.side-block{padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);transition:border-color .25s,background .25s}
+.side-block:hover{border-color:var(--line-2)}
+.side-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+.side-quiet{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-3);background:none;border:0;padding:4px 2px}
+#pet-class{font-size:11.5px;color:var(--ink-2);margin-bottom:10px;line-height:1.5}
+.pet-xp-wrap{height:5px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:12px}
+#pet-xpbar{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--green),var(--green-3));box-shadow:0 0 10px rgba(126,231,135,.55);transition:width 1s var(--ease)}
+#pet-slogan{font-size:11px;color:var(--ink-3);font-style:italic;line-height:1.6}
+#hero-chips{margin-top:11px}
+.chip{display:inline-block;padding:2px 8px;margin:0 4px 5px 0;border-radius:999px;font-size:10px;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line)}
+#pet-stats{margin-top:2px}
+.stat-row{display:flex;align-items:center;gap:7px;margin:5px 0;font-size:10px}
+.stat-k{color:var(--ink-3);min-width:48px}
+.stat-bar{display:block;flex:1;height:4px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}
+.stat-fill{display:block;height:100%;min-width:2px;border-radius:999px;background:linear-gradient(90deg,var(--green-2),var(--green-3));box-shadow:0 0 7px rgba(126,231,135,.42);transition:width .9s var(--ease)}
+.stat-v{color:var(--ink-2);min-width:20px;text-align:right;font-variant-numeric:tabular-nums}
+#pet-xptext:empty,#pet-class:empty,#pet-slogan:empty,#hero-chips:empty,#pet-stats:empty,
+#todos:empty,#weather-text:empty,#alarm-line:empty{display:none}
+
+/* ---------------- 中央舞台 ---------------- */
+#stage{
+  grid-area:stage;position:relative;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:8px 16px 0;
+}
+#stage::after{
+  content:"";position:absolute;left:50%;bottom:36px;transform:translateX(-50%);
+  width:min(720px,120%);height:190px;pointer-events:none;z-index:-1;
+  background:radial-gradient(58% 100% at 50% 100%,rgba(126,231,135,.12),transparent 72%);
+}
+
+#bubble{
+  position:relative;max-width:min(560px,86%);margin-bottom:2px;
+  padding:10px 16px;border-radius:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,.095),rgba(255,255,255,.045));
+  border:1px solid var(--line);
+  backdrop-filter:blur(16px);
+  font-size:13.5px;line-height:1.6;text-align:center;
+  box-shadow:0 12px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  transition:opacity .4s var(--ease),transform .45s var(--spring);
+}
+#bubble.pop{animation:bubblePop .55s var(--spring)}
+@keyframes bubblePop{0%{transform:scale(.88) translateY(6px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+#quote{display:block}
+
+#pet-wrap{position:relative;width:clamp(300px,56vh,440px);aspect-ratio:1;display:grid;place-items:center}
+#ground{
+  position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
+  width:72%;height:20%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(50% 50% at 50% 50%,rgba(126,231,135,.30),rgba(126,231,135,.06) 60%,transparent 78%);
+  filter:blur(9px);animation:groundPulse 3.4s var(--ease) infinite;
+}
+@keyframes groundPulse{0%,100%{opacity:.7;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.07)}}
+
+#ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.ring-bg{fill:none;stroke:rgba(255,255,255,.055);stroke-width:7}
+.ring-fg{
+  fill:none;stroke:url(#ringGrad);stroke-width:7;stroke-linecap:round;
+  stroke-dasharray:653.45;stroke-dashoffset:653.45;
+  transition:stroke-dashoffset 1.2s var(--ease);
+  filter:drop-shadow(0 0 8px rgba(126,231,135,.6));
+}
+
+#sprite{width:84%;height:84%;cursor:grab;position:relative;transition:transform .4s var(--spring),filter .4s var(--ease);will-change:transform}
+#sprite:active{cursor:grabbing}
+#sprite svg{width:100%;height:100%;overflow:visible;display:block}
+#sprite:hover{filter:drop-shadow(0 14px 38px rgba(126,231,135,.32))}
+
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.028,.975)}}
+@keyframes leafSway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
+#g-orbit{transform-origin:110px 118px;animation:orbitSpin 18s linear infinite}
+@keyframes orbitSpin{to{transform:rotate(360deg)}}
+@keyframes shadowPulse{0%,100%{transform:scale(1)}50%{transform:scale(.94)}}
+
+
+/* ===== 表情：靠"形状切换"表达，不靠细节堆砌 =====
+   注意：这些组在 HTML 里【不能】写内联 display:none —— 内联样式优先级高于类规则，
+   CSS 就切不过来了（踩过）。默认隐藏统一放这里。 */
+#eyesHappy,#eyesSurprised,#eyesClosed,#eyesSad,#eyesFocus,#m-open,#m-oh,#m-flat,#m-frown,#m-w,#m-puff{display:none}
+
+/* ===== 待机行为：生命感来自"动作"，不来自细节 =====
+   JS 随机挑一个加类，动画结束自动摘掉，回落到呼吸 */
+  16%{transform:translateY(4px) scale(1.13,.87)}
+  44%{transform:translateY(-24px) scale(.91,1.15)}
+  68%{transform:translateY(0) scale(1.11,.89)}
+  84%{transform:translateY(-5px) scale(.98,1.03)}
+  100%{transform:translateY(0) scale(1,1)}
+}
+@keyframes behTiltL{0%{transform:rotate(0)}28%{transform:rotate(-7.5deg)}68%{transform:rotate(-4deg)}100%{transform:rotate(0)}}
+@keyframes behTiltR{0%{transform:rotate(0)}28%{transform:rotate(7.5deg)}68%{transform:rotate(4deg)}100%{transform:rotate(0)}}
+  32%{transform:scale(.9,1.15) translateY(-6px)}
+  66%{transform:scale(1.07,.94)}
+  100%{transform:scale(1,1)}
+}
+@keyframes behShake{0%,100%{transform:rotate(0)}18%{transform:rotate(-6.5deg)}38%{transform:rotate(5.5deg)}58%{transform:rotate(-3.5deg)}78%{transform:rotate(2deg)}}
+@keyframes behLean{0%{transform:translateY(0) rotate(0)}38%{transform:translateY(-9px) rotate(3.5deg)}100%{transform:translateY(0) rotate(0)}}
+@keyframes behNod{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(3px) rotate(2deg)}50%{transform:translateY(-2px) rotate(-1deg)}75%{transform:translateY(2px) rotate(1deg)}}
+
+/* 被摸 / 升级时的弹一下 */
+#sprite.bounce{animation:spriteBounce .6s var(--spring)}
+@keyframes spriteBounce{0%{transform:scale(1,1) translateY(0)}25%{transform:scale(1.09,.9) translateY(4px)}55%{transform:scale(.94,1.09) translateY(-16px)}100%{transform:scale(1,1) translateY(0)}}
+#sprite.wiggle{animation:spriteWiggle .9s var(--ease)}
+@keyframes spriteWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-4.5deg)}75%{transform:rotate(4.5deg)}}
+#sprite.squish{animation:spriteSquish .5s var(--spring)}
+@keyframes spriteSquish{0%{transform:scale(1,1)}40%{transform:scale(1.14,.86)}100%{transform:scale(1,1)}}
+
+#zzz{position:absolute;right:16%;top:14%;font-size:15px;color:var(--green);opacity:0;pointer-events:none;transition:opacity .4s}
+#pet-wrap.sleepy #zzz{opacity:1}
+#pet-wrap.sleepy #zzz span{display:inline-block;animation:zzz 2.6s var(--ease) infinite}
+#zzz span:nth-child(2){animation-delay:.5s;font-size:12px}
+#zzz span:nth-child(3){animation-delay:1s;font-size:10px}
+@keyframes zzz{0%{transform:translate(0,0);opacity:0}30%{opacity:.9}100%{transform:translate(16px,-26px);opacity:0}}
+
+/* 中央底部物件排：贴底，把纵向空间全留给宠物 */
+#dock{display:flex;gap:4px;padding:6px 0 8px;margin-top:auto}
+
+/* ---------------- 右栏 ---------------- */
+#context{
+  grid-area:ctx;display:flex;flex-direction:column;min-height:0;
+  border-left:1px solid var(--line);
+  background:linear-gradient(180deg,var(--panel),transparent 55%);
+}
+#drawer-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+#drawer-tabs{display:flex;gap:3px;flex:1;overflow-x:auto;scrollbar-width:none}
+#drawer-tabs::-webkit-scrollbar{display:none}
+.dtab{padding:5px 10px;border-radius:9px;font-size:11.5px;color:var(--ink-3);white-space:nowrap;transition:background .25s,color .25s}
+.dtab:hover{color:var(--ink);background:var(--panel-2)}
+.dtab.is-on{color:var(--green);background:rgba(126,231,135,.12)}
+#drawer-close{font-size:13px;color:var(--ink-3);padding:5px 8px;border-radius:9px;transition:background .2s,color .2s;display:none}
+#drawer-close:hover{background:var(--panel-2);color:var(--ink)}
+.dpanel{display:none;overflow-y:auto;padding:12px;flex:1;min-height:0}
+.dpanel.is-on{display:block;animation:fadeUp .35s var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dpanel::-webkit-scrollbar{width:8px}
+.dpanel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}
+
+.soft-block{padding:11px 12px;border-radius:13px;background:var(--panel);border:1px solid var(--line);margin-bottom:10px}
+.soft-title{font-size:10.5px;color:var(--green);font-weight:600;margin-bottom:8px;letter-spacing:.05em}
+.row-inline{display:flex;gap:7px;align-items:center;margin-top:8px}
+.row-inline input,.row-inline select{flex:1;min-width:0;padding:8px 11px;border-radius:10px;background:rgba(0,0,0,.34);border:1px solid var(--line);color:var(--ink);transition:border-color .25s,background .25s}
+.row-inline input:focus,.row-inline select:focus{border-color:rgba(126,231,135,.5);box-shadow:0 0 0 3px rgba(126,231,135,.20);background:rgba(0,0,0,.46)}
+.row-inline input::placeholder{color:var(--ink-3)}
+.row-inline button,.modal-box button{padding:8px 14px;border-radius:10px;font-size:12px;background:linear-gradient(180deg,var(--green),var(--green-2));color:#04170c;font-weight:600;transition:transform .35s var(--spring),filter .25s}
+.row-inline button:hover,.modal-box button:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.row-inline button:active,.modal-box button:active{transform:translateY(0) scale(.97)}
+button.ghost{background:var(--panel-2);color:var(--ink-2);border:1px solid var(--line);font-weight:500}
+button.ghost:hover{background:rgba(255,255,255,.09);color:var(--ink)}
+
+.brief-item{padding:10px 11px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin-bottom:7px;transition:transform .3s var(--spring),border-color .25s,background .25s}
+.brief-item:hover{transform:translateX(3px);border-color:rgba(126,231,135,.3);background:var(--panel-2)}
+.brief-title{font-size:12px;color:var(--green);font-weight:600;text-decoration:none;display:block;line-height:1.45}
+.brief-title:hover{text-decoration:underline}
+.brief-text{font-size:11px;color:var(--ink-2);margin-top:5px;line-height:1.6}
+.badge{display:inline-block;font-size:9px;padding:1px 6px;border-radius:999px;background:rgba(126,231,135,.14);color:var(--green);margin-bottom:4px}
+
+#chat-log{display:flex;flex-direction:column;gap:7px;margin-bottom:9px}
+#chat-log>div{max-width:88%;padding:8px 11px;border-radius:13px;font-size:12px;line-height:1.55;animation:fadeUp .3s var(--ease)}
+#chat-log>div.me{align-self:flex-end;background:linear-gradient(180deg,rgba(126,231,135,.20),rgba(126,231,135,.10));border:1px solid rgba(126,231,135,.26)}
+#chat-log>div.her{align-self:flex-start;background:var(--panel-2);border:1px solid var(--line)}
+.chat-thinking{opacity:.6;font-style:italic}
+
+.ledger-card{padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin-bottom:7px;display:flex;align-items:center;gap:9px}
+.lc-name{flex:1;font-size:12px;color:var(--ink-2)}
+.lc-sum{font-size:12.5px;font-weight:600;color:var(--green);font-variant-numeric:tabular-nums}
+.lc-n{font-size:10px;color:var(--ink-3)}
+.lc-empty{color:var(--ink-3);font-size:12px;text-align:center;padding:12px}
+
+.td-step{margin-bottom:9px}
+.td-title{font-size:12px;color:var(--green);font-weight:600;margin-bottom:3px}
+.td-code{font-family:"Cascadia Code",Consolas,monospace;font-size:11px;background:rgba(0,0,0,.42);border:1px solid var(--line);border-radius:9px;padding:7px 10px;margin:4px 0;color:#dcf7e6;overflow-x:auto;white-space:pre}
+.td-text{font-size:11.5px;color:var(--ink-2);line-height:1.65;white-space:pre-line}
+.timer-row{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+#timer{font-size:28px;font-weight:200;font-variant-numeric:tabular-nums;flex:1}
+
+/* ---------------- 底栏 ---------------- */
+#statusbar{
+  grid-area:status;display:flex;align-items:center;gap:14px;
+  padding:0 16px;border-top:1px solid var(--line);font-size:10px;color:var(--ink-3);
+  background:linear-gradient(0deg,rgba(255,255,255,.03),transparent);
+}
+#status{color:var(--green)}
+#hint{opacity:.7}
+
+/* ---------------- 弹层 ---------------- */
+.modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(3,7,5,.72);backdrop-filter:blur(7px);animation:fade .28s var(--ease)}
+.modal-box{width:min(620px,92vw);max-height:86vh;overflow-y:auto;padding:20px;border-radius:20px;background:linear-gradient(180deg,rgba(16,28,22,.98),rgba(8,16,12,.99));border:1px solid var(--line);box-shadow:0 40px 100px rgba(0,0,0,.7);animation:modalIn .45s var(--spring)}
+@keyframes modalIn{from{transform:scale(.95) translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.modal-title{flex:1;font-size:14.5px;font-weight:600;color:var(--green)}
+.modal-box input{width:100%;margin-top:10px;padding:10px 13px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--ink)}
+.modal-box input:focus{border-color:rgba(126,231,135,.5);box-shadow:0 0 0 3px rgba(126,231,135,.20)}
+#scrim{position:fixed;inset:0;z-index:20;background:rgba(3,7,5,.5);backdrop-filter:blur(3px)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+.weekly-glow{animation:wglow 1s var(--ease) 4}
+@keyframes wglow{0%,100%{box-shadow:0 0 0 rgba(126,231,135,0)}50%{box-shadow:0 0 24px rgba(126,231,135,.55)}}
+
+.spark{position:fixed;pointer-events:none;z-index:80;font-size:15px;animation:sparkUp 1.1s var(--ease) forwards}
+@keyframes sparkUp{0%{transform:translate(0,0) scale(.5);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1.25);opacity:0}}
+
+/* ---------------- 窄窗降级：右栏变覆盖式抽屉 ---------------- */
+@media (max-width:960px){
+  #app{
+    grid-template-columns:1fr;
+    grid-template-areas:"top" "stage" "status";
+  }
+  #sidebar{display:none}
+  #context{
+    position:fixed;top:0;right:0;bottom:0;width:min(380px,92vw);z-index:30;
+    background:linear-gradient(180deg,rgba(12,22,17,.97),rgba(6,12,9,.99));
+    box-shadow:-30px 0 80px rgba(0,0,0,.6);animation:slideIn .45s var(--spring);
+  }
+  #context.hidden{display:none !important}
+  #drawer-close{display:block}
+  #dock{flex-wrap:wrap;justify-content:center}
+}
+@keyframes slideIn{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+/* ============================================================
+   v60 · 卡片轮播主界面
+   新增：横贯全宽的 3D 卡牌轮播 + 环绕宠物的浮动信息片
+   ============================================================ */
+
+:root{
+  --deck-h:158px;
+  --card-w:186px;
+  --card-h:112px;
+}
+
+/* 网格加一行放卡牌 */
+#app{
+  grid-template-rows:var(--top-h) minmax(0,1fr) var(--bot-h);
+  grid-template-areas:
+    "top    top    top"
+    "side   stage  ctx"
+    "status status status";
+}
+
+/* app.js 的旧入口藏起来（由卡片代理点击） */
+#hidden-anchors{display:none}
+
+/* ---------------- 左栏信息补密 ---------------- */
+.qrow{display:flex;flex-direction:column;gap:3px}
+
+.lv-chip{display:flex;align-items:center;gap:8px}
+.xp-mini{display:inline-block;width:66px;height:5px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
+.xp-mini>span{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--green-3));box-shadow:0 0 8px rgba(126,231,135,.6);transition:width .8s var(--ease)}
+
+/* ---------------- 中央：浮动信息片 ---------------- */
+#orbs-float{position:absolute;inset:0;pointer-events:none;z-index:2}
+.fchip{
+  position:absolute;display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:8px 13px;border-radius:15px;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03));
+  border:1px solid var(--line);backdrop-filter:blur(14px);
+  box-shadow:0 12px 30px rgba(0,0,0,.4);
+  animation:floaty 6.5s var(--ease) infinite;
+}
+.fchip b{font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.2}
+.fchip i{font-size:9px;color:var(--ink-3);font-style:normal;letter-spacing:.05em}
+.fc1{left:4%;top:22%;animation-delay:-1.2s}
+.fc2{right:3%;top:30%;animation-delay:-2.8s}
+.fc3{left:9%;bottom:16%;animation-delay:-4.4s}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(-.6deg)}50%{transform:translateY(-10px) rotate(.6deg)}}
+
+/* 右栏标题 */
+#ctx-title{flex:1;font-size:13px;font-weight:650;color:var(--green)}
+
+@media (max-width:960px){
+  :root{--deck-h:142px;--card-w:158px;--card-h:104px}
+  #orbs-float{display:none}
+  .fchip{display:none}
+}
+
+/* ============================================================
+   v62 · 打磨层
+   ① @property 让颜色变量可被浏览器插值
+   ② 时间光照接管背景 / 天光 / 环境光球
+   ③ 质感：噪点、暗角、焦点环、滚动条、选中色
+   ④ 热力图 / 命令面板 / Toast
+   ============================================================ */
+
+@property --bg-1      { syntax:'<color>'; inherits:true; initial-value:#06100b; }
+@property --bg-2      { syntax:'<color>'; inherits:true; initial-value:#0a1811; }
+@property --accent    { syntax:'<color>'; inherits:true; initial-value:#7ee787; }
+@property --accent-2  { syntax:'<color>'; inherits:true; initial-value:#4ade80; }
+@property --amb-1     { syntax:'<color>'; inherits:true; initial-value:#3fbf6f; }
+@property --amb-2     { syntax:'<color>'; inherits:true; initial-value:#22a06b; }
+@property --amb-3     { syntax:'<color>'; inherits:true; initial-value:#1e7a4f; }
+@property --sky       { syntax:'<color>'; inherits:true; initial-value:#7ee787; }
+@property --a         { syntax:'<angle>'; inherits:false; initial-value:0deg; }
+
+body{
+  background:
+    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--sky) 12%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 46%, var(--bg-2) 100%);
+  transition: background 4s linear;
+}
+.o1{background:radial-gradient(circle, var(--amb-1), transparent 70%)}
+.o2{background:radial-gradient(circle, var(--amb-2), transparent 70%)}
+.o3{background:radial-gradient(circle, var(--amb-3), transparent 70%)}
+#ambient::after{
+  background:radial-gradient(60% 60% at 50% 0%, color-mix(in srgb, var(--sky) 22%, transparent), transparent 70%);
+  transition: background 4s linear;
+}
+#stage::after{
+  background:radial-gradient(58% 100% at 50% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 72%);
+}
+#brand-dot{background:var(--accent);box-shadow:0 0 12px var(--accent)}
+#status{color:var(--accent)}
+.whisper-pill .dot,#card-brief-val,.dcard .dval,.soft-title,#ctx-title{color:var(--accent)}
+.side-title{color:color-mix(in srgb, var(--accent) 55%, var(--ink-3))}
+
+#auraG stop:first-child{stop-color:var(--accent);transition:stop-color 4s linear}
+#ringGrad stop:first-child{stop-color:var(--accent);transition:stop-color 4s linear}
+
+body::after{
+  content:"";position:fixed;inset:0;z-index:3;pointer-events:none;
+  background:
+    radial-gradient(150% 110% at 50% 46%, transparent 62%, rgba(0,0,0,.34) 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.5'/></svg>");
+  background-size:cover, 160px 160px;
+  opacity:.26;
+}
+::selection{background:color-mix(in srgb, var(--accent) 38%, transparent);color:#fff}
+:focus-visible{outline:2px solid color-mix(in srgb, var(--accent) 70%, transparent);outline-offset:2px;border-radius:8px}
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:color-mix(in srgb, var(--accent) 22%, transparent);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb, var(--accent) 42%, transparent);background-clip:content-box}
+
+.icon-btn{
+  width:28px;height:28px;border-radius:9px;font-size:13px;line-height:1;
+  background:var(--panel);border:1px solid var(--line);color:var(--ink-2);
+  transition:transform .3s var(--spring),background .25s,color .25s,opacity .25s;
+}
+.icon-btn:hover{background:var(--panel-2);transform:translateY(-1px) scale(1.06)}
+.icon-btn.off{opacity:.42}
+.kbd-hint{
+  display:flex;align-items:center;gap:3px;padding:4px 7px;border-radius:9px;
+  background:var(--panel);border:1px solid var(--line);
+  transition:transform .3s var(--spring),background .25s;
+}
+.kbd-hint:hover{background:var(--panel-2);transform:translateY(-1px)}
+.kbd-hint kbd{
+  font:600 9.5px/1 ui-monospace,Consolas,monospace;color:var(--ink-3);
+  background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:5px;padding:3px 4px;
+}
+
+#heat{display:flex;gap:3px;margin-top:2px}
+.hcol{display:flex;flex-direction:column;gap:3px}
+.hc{width:11px;height:11px;border-radius:3px;background:rgba(255,255,255,.055);display:block;transition:transform .25s var(--spring),background .3s}
+.hc:hover{transform:scale(1.5)}
+.hc.h1{background:color-mix(in srgb, var(--accent) 26%, transparent)}
+.hc.h2{background:color-mix(in srgb, var(--accent) 46%, transparent)}
+.hc.h3{background:color-mix(in srgb, var(--accent) 68%, transparent)}
+.hc.h4{background:var(--accent);box-shadow:0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)}
+.hc.hx{background:transparent;border:1px dashed rgba(255,255,255,.07)}
+#heat-legend{display:flex;align-items:center;gap:3px;margin-top:8px;font-size:9px;color:var(--ink-3)}
+#heat-legend .hl{width:9px;height:9px;border-radius:2px;display:block}
+
+#cmdk{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:start center;
+  padding-top:14vh;background:rgba(3,6,5,.62);backdrop-filter:blur(9px);
+  animation:fade .18s var(--ease);
+}
+#cmdk-panel{
+  width:min(640px,92vw);border-radius:20px;overflow:hidden;
+  background:linear-gradient(180deg,color-mix(in srgb, var(--bg-2) 92%, #fff 8%), var(--bg-1));
+  border:1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  box-shadow:0 44px 110px rgba(0,0,0,.72), 0 0 60px color-mix(in srgb, var(--accent) 14%, transparent);
+  animation:cmdkIn .34s var(--spring);
+}
+@keyframes cmdkIn{from{transform:translateY(-14px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+#cmdk-inputrow{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+#cmdk-ico{font-size:15px;color:var(--accent)}
+#cmdk-input{flex:1;background:none;border:0;font-size:15px;color:var(--ink)}
+/* cmdk 输入的焦点给整个框加环，比单给 input 描边更清楚 */
+#cmdk:focus-within .modal-box{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#7ee787) 45%,transparent)}
+#cmdk-input::placeholder{color:var(--ink-3)}
+#cmdk-inputrow kbd{font:600 10px/1 ui-monospace,Consolas,monospace;color:var(--ink-3);background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+#cmdk-list{max-height:46vh;overflow-y:auto;padding:8px}
+.cmdk-row{
+  width:100%;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;
+  text-align:left;color:var(--ink-2);transition:background .16s,transform .2s var(--spring);
+}
+.cmdk-row .ci{font-size:15px;width:22px;text-align:center}
+.cmdk-row .cn{font-size:13px;color:var(--ink)}
+.cmdk-row .ch{margin-left:auto;font-size:10.5px;color:var(--ink-3)}
+.cmdk-row.is-on{background:color-mix(in srgb, var(--accent) 15%, transparent);transform:translateX(3px)}
+.cmdk-row.is-on .cn{color:var(--accent)}
+.cmdk-empty{padding:22px;text-align:center;color:var(--ink-3);font-size:12px}
+#cmdk-foot{display:flex;gap:14px;padding:9px 16px;border-top:1px solid var(--line);font-size:10px;color:var(--ink-3)}
+#cmdk-foot span:last-child{margin-left:auto}
+
+#green-toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+  z-index:210;padding:9px 16px;border-radius:13px;font-size:12.5px;color:var(--ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.05));
+  border:1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  backdrop-filter:blur(16px);box-shadow:0 16px 40px rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:opacity .28s var(--ease),transform .38s var(--spring);
+}
+#green-toast.show{opacity:1;transform:translate(-50%,0)}
+
+.dcard::before{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+  background:conic-gradient(from var(--a), transparent 0 72%, color-mix(in srgb, var(--accent) 55%, transparent) 86%, transparent 100%);
+  opacity:0;transition:opacity .35s;
+}
+.dcard.is-center::before{opacity:.9;animation:spinA 5.5s linear infinite}
+@keyframes spinA{to{--a:360deg}}
+
+@media (prefers-reduced-motion:reduce){
+  #green-toast,.dcard::before{transition:none;animation:none}
+}
+/* 卡牌区上方的接缝光，把舞台和卡牌连起来 */
+#deckwrap{position:relative}
+#deckwrap::after{
+  content:"";position:absolute;left:50%;top:-1px;transform:translateX(-50%);
+  width:min(900px,88%);height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--accent) 55%, transparent),transparent);
+}
+/* 卡牌在暗环境里需要一点点自己的底光 */
+.drail{background:radial-gradient(60% 120% at 50% 100%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%)}
+/* 卡牌按下反馈：立刻有形变（不等松手） */
+.dcard.pressing{transform-origin:50% 60%;filter:brightness(1.3)}
+.dcard:active{filter:brightness(1.22)}
+/* 让整张卡都是明确的可点目标 */
+.dcard{cursor:pointer}
+.dcard.is-center{cursor:pointer}
+/* ============================================================
+   v70 · 身边的小物件（替代卡牌）
+   不做方盒子 —— 图标是"物件"，围在宠物周围浮着
+   ============================================================ */
+#orbs{position:absolute;inset:0;z-index:4;pointer-events:none}
+
+.orb-btn{
+  position:absolute;width:58px;height:58px;margin:-29px 0 0 -29px;
+  display:grid;place-items:center;pointer-events:auto;cursor:pointer;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.26), rgba(255,255,255,.05) 48%, rgba(0,0,0,.34)),
+    color-mix(in srgb, var(--accent) 9%, transparent);
+  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  backdrop-filter:blur(13px);
+  box-shadow:0 12px 28px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.2);
+  animation:bob 4.8s var(--ease) infinite;
+  animation-delay:var(--ph, 0s);
+  transition:border-color .3s, box-shadow .35s, background .35s;
+}
+@keyframes bob{
+  0%,100%{transform:translateY(0) rotate(var(--rot,0deg))}
+  50%    {transform:translateY(-10px) rotate(calc(var(--rot,0deg) * -1))}
+}
+
+.orb-btn .ob-ico{
+  font-size:24px;line-height:1;
+  filter:drop-shadow(0 3px 7px rgba(0,0,0,.55));
+  transition:transform .45s var(--spring);
+}
+.orb-btn .ob-val{
+  position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  font-size:9.5px;font-style:normal;font-weight:700;line-height:1;letter-spacing:.02em;
+  padding:3px 7px;border-radius:99px;white-space:nowrap;
+  color:#04170c;background:var(--accent);
+  box-shadow:0 3px 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.orb-btn .ob-val:empty{display:none}
+
+/* 悬停：冒出名字 + 向内发光 */
+.orb-btn::after{
+  content:attr(data-name);
+  position:absolute;top:-28px;left:50%;transform:translateX(-50%) scale(.92);
+  font-size:10.5px;white-space:nowrap;padding:4px 10px;border-radius:10px;
+  background:rgba(6,14,10,.92);border:1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  color:var(--ink-2);opacity:0;pointer-events:none;
+  transition:opacity .24s,transform .36s var(--spring);
+}
+.orb-btn:hover::after{opacity:1;transform:translateX(-50%) scale(1)}
+.orb-btn:hover{
+  border-color:color-mix(in srgb, var(--accent) 62%, transparent);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.34), rgba(255,255,255,.08) 48%, rgba(0,0,0,.3)),
+    color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow:0 16px 38px rgba(0,0,0,.6),
+             0 0 30px color-mix(in srgb, var(--accent) 34%, transparent),
+             inset 0 1px 0 rgba(255,255,255,.26);
+  z-index:6;
+}
+.orb-btn:hover .ob-ico{transform:scale(1.24) rotate(-7deg)}
+.orb-btn:active{box-shadow:0 8px 20px rgba(0,0,0,.5), 0 0 22px color-mix(in srgb, var(--accent) 44%, transparent)}
+
+/* 触发瞬间的脉冲 */
+.orb-btn.hit{animation:hit .42s var(--spring)}
+@keyframes hit{0%{transform:scale(1)}36%{transform:scale(1.3)}72%{transform:scale(.94)}100%{transform:scale(1)}}
+
+@media (max-width:960px){
+  #orbs{display:none}
+}
+/* v70 · 宠物脚下的一行环境文字（取代浮动信息片） */
+#ambient-line{
+  display:flex;align-items:center;gap:9px;margin-top:6px;
+  font-size:11.5px;color:var(--ink-3);letter-spacing:.03em;
+  animation:ambIn .6s var(--ease);
+}
+#ambient-line i{font-style:normal;opacity:.45}
+#ambient-line #fc-focus{color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+#ambient-line #fc-doing{color:var(--ink-2)}
+@keyframes ambIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* 旧浮动片彻底退役 */
+#orbs-float,.fchip{display:none !important}
+/* ============================================================
+   v70 · 去盒子化：右栏不再是"卡片列表"，改成有呼吸感的条目
+   ============================================================ */
+.brief-item{
+  background:none !important;
+  border:0 !important;
+  border-left:2px solid transparent !important;
+  border-radius:0 10px 10px 0 !important;
+  padding:9px 12px 11px 14px !important;
+  margin-bottom:2px !important;
+  transition:background .25s, border-left-color .25s, transform .3s var(--spring) !important;
+}
+.brief-item:hover{
+  background:color-mix(in srgb, var(--accent) 7%, transparent) !important;
+  border-left-color:var(--accent) !important;
+  transform:translateX(4px) !important;
+}
+.brief-item + .brief-item{border-top:1px solid var(--line) !important;border-top-left-radius:0 !important}
+.badge{background:none !important;padding:0 !important;color:color-mix(in srgb, var(--accent) 72%, var(--ink-3)) !important;letter-spacing:.06em;font-size:9px !important}
+
+.soft-block{
+  background:none !important;
+  border:0 !important;
+  border-radius:0 !important;
+  padding:4px 2px 14px !important;
+  margin-bottom:6px !important;
+}
+.soft-block + .soft-block{border-top:1px solid var(--line) !important;padding-top:14px !important}
+.soft-title{font-size:10px !important;letter-spacing:.14em !important;text-transform:uppercase;opacity:.9}
+
+/* 右栏整体：不要背景板，让它像"浮在墙上" */
+#context{background:none !important;border-left:1px solid var(--line) !important}
+#drawer-head{border-bottom:1px solid var(--line);padding-bottom:11px}
+#ctx-title{font-size:13.5px;letter-spacing:.02em}
+
+/* 左栏同理：侧面不再是一摞盒子，改为分组线 */
+.side-block{
+  background:none !important;border:0 !important;border-radius:0 !important;
+  padding:2px 2px 14px !important;margin-bottom:2px !important;
+}
+.side-block + .side-block{border-top:1px solid var(--line) !important;padding-top:14px !important}
+/* ============================================================
+   v80 · 手作层（去 AI 味）
+   ① 排版：标题用衬线、数字用等宽 —— 摆脱"AI 仪表盘"的默认无衬线
+   ② 图标：换成自己画的一套（.ico + 手抖滤镜）
+   ③ 质感：手绘横线、铅笔虚线、标签微倾、去掉玻璃高光
+   ============================================================ */
+
+:root{
+  --font-title:"Source Han Serif SC","Noto Serif SC","Songti SC","STSong","SimSun",Georgia,serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --font-num:ui-monospace,"SF Mono",Consolas,"Cascadia Mono","Courier New",monospace;
+}
+
+/* ---------- ① 排版 ---------- */
+.side-title,.soft-title,#ctx-title,.modal-title,.cmdk-row .cn,#brand-name{
+  font-family:var(--font-title);font-weight:600;letter-spacing:.08em;
+}
+#brand-name{font-size:14.5px;letter-spacing:.2em}
+.side-title{font-size:11.5px;display:inline-flex;align-items:center;gap:6px;transform:rotate(-.45deg)}
+.soft-title{font-size:11.5px;letter-spacing:.15em;display:flex;align-items:center;gap:7px;transform:rotate(-.3deg)}
+
+/* 数字一律等宽 + 表格数字：像仪器读数，而不是网页数字 */
+#clock,#pet-level,#pet-xptext,#mini-clock,#companion-time,#timer,
+#card-brief-val,#card-log-val,#card-env-val,#card-ledger-val,#card-task-val,
+.ob-val,#ledger-total,#weekly-progress,.cmdk-row .ch,.hc+.hc{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+}
+#clock{letter-spacing:.04em}
+
+/* ---------- ② 图标 ---------- */
+.ico{
+  width:1em;height:1em;flex:0 0 auto;display:inline-block;
+  fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;
+  vertical-align:-.13em;
+  filter:url(#rough);
+}
+.orb-btn .ico{width:26px;height:26px;color:color-mix(in srgb,var(--accent) 82%,#eafff2);stroke-width:1.6}
+.orb-btn:hover .ico{color:#eafff2}
+.soft-title .ico{width:14px;height:14px;color:color-mix(in srgb,var(--accent) 70%,var(--ink-3))}
+#ctx-title{display:flex;align-items:center;gap:8px}
+#ctx-title .ico{width:16px;height:16px}
+.modal-title{display:inline-flex;align-items:center;gap:8px}
+.modal-title .ico{width:16px;height:16px}
+.icon-btn .ico{width:15px;height:15px;vertical-align:0}
+.kbd-hint .ico{width:13px;height:13px;opacity:.75;vertical-align:0}
+.ghost .ico{width:14px;height:14px;margin-right:5px;vertical-align:-.16em}
+#drawer-head .ico{width:15px;height:15px}
+.cmdk-row .ci .ico{width:17px;height:17px;vertical-align:0}
+.cmdk-row .ci{display:grid;place-items:center}
+#cmdk-ico .ico{width:17px;height:17px;vertical-align:0}
+#cmdk-ico{display:grid;place-items:center}
+
+/* ---------- ③ 质感 ---------- */
+/* 顶栏下沿换成手绘的线（有起伏，不是机器直尺画的） */
+#topbar{border-bottom:0 !important;position:relative}
+#topbar::after{
+  content:"";position:absolute;left:0;right:0;bottom:-3px;height:7px;pointer-events:none;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='7'><path d='M0 3.6 Q 35 1.7 70 3.3 Q 105 4.9 140 2.9' fill='none' stroke='%237ee787' stroke-opacity='.3' stroke-width='1.15' stroke-linecap='round'/></svg>") repeat-x;
+}
+#statusbar{border-top:0 !important;position:relative}
+#statusbar::before{
+  content:"";position:absolute;left:0;right:0;top:-3px;height:7px;pointer-events:none;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='7'><path d='M0 3.1 Q 45 4.8 90 3.2 Q 135 1.6 180 3.4' fill='none' stroke='%237ee787' stroke-opacity='.2' stroke-width='1.1' stroke-linecap='round'/></svg>") repeat-x;
+}
+
+/* 分组线改成铅笔虚线 */
+.side-block + .side-block,.soft-block + .soft-block{
+  border-top:1px dashed color-mix(in srgb,var(--accent) 16%,var(--line)) !important;
+}
+.brief-item + .brief-item{border-top:1px dashed var(--line) !important}
+
+/* 物件：去掉玻璃高光，改成磨砂 + 细描边 + 内圈（像压印的圆牌） */
+.orb-btn{
+  background:color-mix(in srgb,var(--bg-2) 74%,transparent) !important;
+  border:1.4px solid color-mix(in srgb,var(--accent) 40%,transparent) !important;
+  box-shadow:0 7px 20px rgba(0,0,0,.45),
+             inset 0 0 0 3px color-mix(in srgb,var(--accent) 8%,transparent) !important;
+  backdrop-filter:blur(11px);
+}
+.orb-btn:hover{
+  border-color:color-mix(in srgb,var(--accent) 78%,transparent) !important;
+  background:color-mix(in srgb,var(--bg-2) 62%,transparent) !important;
+  box-shadow:0 10px 26px rgba(0,0,0,.5),
+             inset 0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent),
+             0 0 26px color-mix(in srgb,var(--accent) 26%,transparent) !important;
+}
+.orb-btn .ob-val{
+  background:color-mix(in srgb,var(--accent) 88%,#eafff2) !important;
+  box-shadow:0 2px 9px rgba(0,0,0,.45) !important;
+  letter-spacing:.02em;
+}
+
+/* 选中标签：手绘下划线 */
+.is-on > .side-title,.is-on > .soft-title{position:relative}
+
+@media (prefers-reduced-motion:reduce){.ico{filter:none}}
+/* v80.1 修正：物件图标太淡 / 圆牌显空 / 右栏标题缺 */
+.orb-btn .ico{
+  width:28px;height:28px;
+  color:color-mix(in srgb,var(--accent) 62%,#f2fff7) !important;
+  stroke-width:1.85 !important;
+}
+.orb-btn:hover .ico{color:#ffffff !important}
+.orb-btn{
+  background:radial-gradient(circle at 50% 38%,
+      color-mix(in srgb,var(--accent) 13%,transparent),
+      color-mix(in srgb,var(--bg-2) 80%,transparent) 70%) !important;
+  border-width:1.5px !important;
+}
+.orb-btn .ob-val{
+  padding:3px 7.5px !important;
+  font-size:9.5px !important;
+  box-shadow:0 2px 10px rgba(0,0,0,.55) !important;
+}
+
+/* 图标整体提亮一档（手抖滤镜会略微变细） */
+.soft-title .ico,.modal-title .ico,#ctx-title .ico{
+  color:color-mix(in srgb,var(--accent) 74%,#eafff2) !important;stroke-width:1.8 !important;
+}
+.icon-btn .ico,.kbd-hint .ico{stroke-width:1.8 !important}
+/* v80.2 图标发虚的真因：手抖滤镜(feDisplacementMap)在 20-28px 上把细线侵蚀掉了。
+   手作感其实由"排版 + 手绘横线"承担就够了，图标改回干净线条。 */
+.ico{filter:none !important}
+.orb-btn .ico{stroke-width:2 !important;color:#d8ffe8 !important}
+.orb-btn:hover .ico{color:#ffffff !important}
+.soft-title .ico,.modal-title .ico,#ctx-title .ico,.cmdk-row .ci .ico{stroke-width:1.95 !important}
+/* ============================================================
+   v84 · 氛围层：视差 / 入场编排 / 雷达图 / 日轨
+   ⚠ 分工：入场用 transform，视差用 translate —— 两者是独立属性，可叠加不打架
+   ============================================================ */
+
+/* ① 视差纵深（鼠标移动时各层速度不同 → 画面有厚度） */
+#pet-wrap{translate:calc(var(--px,0) * 9px) calc(var(--py,0) * 7px)}
+#orbs{translate:calc(var(--px,0) * -6px) calc(var(--py,0) * -5px)}
+#ambient .o1{translate:calc(var(--px,0) * -22px) calc(var(--py,0) * -16px)}
+#ambient .o2{translate:calc(var(--px,0) * 16px) calc(var(--py,0) * 12px)}
+#ambient .o3{translate:calc(var(--px,0) * -12px) calc(var(--py,0) * -9px)}
+#sidebar{translate:calc(var(--px,0) * 3.2px) calc(var(--py,0) * 1.6px)}
+#context{translate:calc(var(--px,0) * -2.6px) calc(var(--py,0) * 1.2px)}
+
+/* ② 入场编排（有先后关系，不是一起淡入） */
+@keyframes enterUp{from{opacity:0;transform:translateY(11px)}to{opacity:1;transform:none}}
+@keyframes enterL{from{opacity:0;transform:translateX(-9px)}to{opacity:1;transform:none}}
+@keyframes enterR{from{opacity:0;transform:translateX(9px)}to{opacity:1;transform:none}}
+.enter{animation:enterUp .66s cubic-bezier(.22,1,.36,1) both}
+#sidebar.enter{animation-name:enterL}
+#context.enter{animation-name:enterR}
+body.booting #pet-wrap,body.booting #orbs{opacity:0}
+
+/* ③ 八维雷达图（替换进度条列表） */
+#pet-stats{display:none}
+#stats-radar{margin:2px -6px 6px;color:var(--accent)}
+#stats-radar svg{display:block}
+#stats-radar text{font-family:var(--font-body);letter-spacing:.02em}
+
+/* ④ 日轨：顶栏底沿那条线，变成"今天走到哪了" */
+#topbar{position:relative}
+#topbar::after{display:none !important}
+#day-arc{
+  position:absolute;left:0;right:0;bottom:-1px;height:14px;
+  color:color-mix(in srgb,var(--sky,#7ee787) 88%, #ffffff);
+  pointer-events:none;opacity:.85;
+}
+#day-arc svg{display:block}
+
+@media (prefers-reduced-motion:reduce){
+  .enter{animation:none}
+  #pet-wrap,#orbs,#ambient .o1,#ambient .o2,#ambient .o3,#sidebar,#context{translate:none}
+}
+/* v84.1 舞台给一块"地"：地平线 + 脚下光晕（原来宠物是悬空的） */
+#stage::before{
+  content:"";position:absolute;left:7%;right:7%;top:82.8%;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,
+    color-mix(in srgb,var(--accent) 22%,transparent) 20%,
+    color-mix(in srgb,var(--accent) 22%,transparent) 80%,transparent);
+}
+#pet-wrap::after{
+  content:"";position:absolute;left:50%;top:83%;width:56%;height:16px;pointer-events:none;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse at 50% 40%, color-mix(in srgb,var(--accent) 15%,transparent), transparent 72%);
+  filter:blur(2.5px);
+}
+/* ============================================================
+   v86 · 今日之环 + 自动草稿
+   ============================================================ */
+:root{--late:#ffb27a}
+
+/* 环：环绕宠物的一整天。z-index 0 + 插在 stage 首个子节点 → 一定在宠物后面 */
+#day-ring{
+  position:absolute;left:50%;top:50%;
+  translate:-50% -57%;
+  width:min(86%,74vh);aspect-ratio:1;
+  color:var(--accent);pointer-events:none;z-index:0;
+  filter:drop-shadow(0 0 18px color-mix(in srgb,var(--accent) 18%,transparent));
+}
+#pet-wrap{z-index:1}
+#day-ring .seg{pointer-events:stroke;cursor:crosshair;transition:stroke-opacity .22s}
+#day-ring .seg:hover{stroke-opacity:1 !important;stroke-width:16}
+#day-tip{
+  position:absolute;translate:-50% -100%;padding:4px 10px;border-radius:8px;
+  font-family:var(--font-num);font-size:11px;letter-spacing:.02em;white-space:nowrap;
+  background:rgba(5,12,9,.95);border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);
+  color:var(--ink);pointer-events:none;z-index:6;
+  box-shadow:0 8px 22px rgba(0,0,0,.5);
+}
+#day-tip.hidden{display:none}
+
+/* 自动草稿：机器替你写好今天，点一下就算记过 */
+#auto-draft{
+  margin:2px 0 16px;padding:13px 14px;border-radius:14px;
+  background:linear-gradient(158deg,color-mix(in srgb,var(--accent) 14%,transparent),transparent 72%);
+  border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#ffffff 8%,transparent);
+}
+#auto-draft.hidden{display:none}
+#auto-draft .ad-label{
+  font-family:var(--font-title);font-size:10.5px;letter-spacing:.14em;
+  color:color-mix(in srgb,var(--accent) 82%,var(--ink-3));margin-bottom:7px;
+}
+#auto-draft .ad-text{font-size:13px;line-height:1.68;color:var(--ink);margin-bottom:11px}
+#auto-draft .ad-actions{display:flex;gap:8px}
+#auto-draft .ad-btn{
+  font-size:12px;padding:6px 14px;border-radius:9px;border:0;cursor:pointer;
+  background:var(--accent);color:#04170c;font-weight:650;
+  transition:transform .3s var(--spring),filter .25s;
+}
+#auto-draft .ad-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+#auto-draft .ad-btn.ghost{
+  background:transparent;color:var(--ink-3);border:1px solid var(--line);font-weight:400;
+}
+
+@media (max-width:960px){#day-ring{display:none}}
+/* v86.1 旧进度弧退役：今日之环已经完整表达了"今天" */
+#ring{display:none !important}
+#day-ring{width:min(96%,82vh) !important;translate:-50% -55% !important}
+/* v86.2 构图：宠物略收，环略放，标签已在环外 */
+#pet-wrap{width:clamp(272px,50vh,396px) !important}
+#day-ring{width:min(104%,90vh) !important;translate:-50% -53% !important}
+#day-ring{filter:drop-shadow(0 0 22px color-mix(in srgb,var(--accent) 22%,transparent)) !important}
+/* ============================================================
+   v88 · 性能优化（真凶：backdrop-filter）
+   背后有一块每帧都在动的 canvas，于是 9 个 backdrop-filter 元素
+   每帧都要重新采样并模糊一次背景 —— 这就是卡顿的来源。
+   这些面板背后本来就是缓慢变化的渐变，模糊几乎看不出来，
+   换成等效的"高不透明度底色 + 更强边框"观感几乎一致，开销归零。
+   ============================================================ */
+#topbar,#sidebar,#context,#statusbar,#green-toast,.kbd-hint,.icon-btn,
+.modal-box,.scrim,.orb-btn,#cmdk-panel,.cmdk-row,.soft-block,.brief-item{
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+}
+#topbar{background:color-mix(in srgb,var(--bg-2) 90%,transparent) !important}
+#sidebar{background:linear-gradient(180deg,color-mix(in srgb,var(--bg-2) 84%,transparent),color-mix(in srgb,var(--bg-1) 86%,transparent)) !important}
+#context{background:linear-gradient(180deg,color-mix(in srgb,var(--bg-2) 82%,transparent),color-mix(in srgb,var(--bg-1) 85%,transparent)) !important}
+#statusbar{background:color-mix(in srgb,var(--bg-2) 86%,transparent) !important}
+.orb-btn{background:radial-gradient(circle at 50% 38%,
+    color-mix(in srgb,var(--accent) 15%,var(--bg-1)) 0%,
+    color-mix(in srgb,var(--bg-2) 92%,transparent) 72%) !important}
+#cmdk{background:rgba(3,6,5,.72) !important}
+#cmdk-panel{background:linear-gradient(180deg,color-mix(in srgb,var(--bg-2) 96%,#fff 4%),var(--bg-1)) !important}
+
+/* 大块 SVG 的 drop-shadow 也很贵（整块重绘），换成便宜的静态光晕 */
+#day-ring{filter:none !important}
+#stage::after{
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 7%,transparent),transparent 78%) !important;
+}
+
+/* 隔离重绘范围：面板内部变化不再向上冒泡触发整页重排 */
+#sidebar,#context{contain:layout paint style}
+/* ★ 修复：contain:paint 会把后代裁剪到 padding box —— 宠物的 bounce/hop/squish
+   会缩放到 ~1.14 倍并上跳 24px，超出 #stage 的部分被直接切掉，表现为"被无形框住、
+/* 深链定位高亮：从壁纸点进来的那一条脉冲三下（曾被覆盖丢失，已恢复） */
+.focus-hit{position:relative;animation:focusPulse 1.2s ease-out 3}
+@keyframes focusPulse{0%{box-shadow:0 0 0 0 rgba(126,231,135,.55)}70%{box-shadow:0 0 0 9px rgba(126,231,135,0)}100%{box-shadow:0 0 0 0 rgba(126,231,135,0)}}
+.focus-hit::after{content:"";position:absolute;left:0;top:8%;bottom:8%;width:2px;border-radius:2px;background:var(--accent,#7ee787);opacity:.9}
+
+/* ============================================================
+   可访问性补全（依据 hueyexe/frontend-agent-skills 的 accessibility-inclusive-design
+   与 emilkowalski/skills 的 Apple Design Skill §14）
+   —— 这整块曾经被 read+write 的写法砍掉过，用 AppendAllText 恢复。
+   ============================================================ */
+
+/* 1) 焦点必须始终可见。Apple §3：手势驱动的交互不能用 CSS 过渡；
+      同理，键盘焦点也不能被 outline:none 抹掉。 */
+:focus-visible{outline:2px solid color-mix(in srgb,var(--accent,#7ee787) 78%,transparent);
+  outline-offset:2px;border-radius:6px}
+.orb-btn:focus-visible,#statusbar button:focus-visible,.icon-btn:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--accent,#7ee787) 82%,transparent);outline-offset:3px}
+:focus:not(:focus-visible){outline:none}
+
+/* 2) 输入框：原来用 outline:none + 仅改边框色（只靠颜色，规范不允许） */
+.row-inline input:focus,.row-inline select:focus{border-color:rgba(126,231,135,.5);
+  box-shadow:0 0 0 3px rgba(126,231,135,.20)}
+.modal-box input:focus{border-color:rgba(126,231,135,.5);box-shadow:0 0 0 3px rgba(126,231,135,.20)}
+#cmdk:focus-within .modal-box{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#7ee787) 45%,transparent)}
+
+/* 3) prefers-reduced-transparency：用户要求降低透明度时，毛玻璃改实底、去模糊 */
+@media (prefers-reduced-transparency: reduce){
+  .modal-box,#cmdk .modal-box,[class*="glass"]{-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+
+/* 4) prefers-contrast: more：近实底 + 明确对比描边 + 文字不透明度拉满 */
+@media (prefers-contrast: more){
+  :root{--line:rgba(126,231,135,.55)}
+  .brief-item,.side-block,.soft-block,.dpanel{border-color:rgba(126,231,135,.5)}
+  .dtext,.brief-text,.muted{opacity:1 !important}
+}
+
+/* 5) 跳转链接：规范要求给键盘用户一条直达主内容的路径。
+      只读/未聚焦时必须完全不可见，否则会像刚才那样裸露在左上角。 */
+.skip-link{position:fixed;left:-9999px;top:0;z-index:99999;padding:10px 18px;
+  background:var(--accent,#7ee787);color:#04140b;font-size:13px;letter-spacing:.08em;
+  border-radius:0 0 10px 0;text-decoration:none;font-weight:600}
+.skip-link:focus{left:0;outline:2px solid #04140b;outline-offset:-4px}
+
+/* 6) 深链定位高亮：从壁纸点进来的那一条脉冲三下 */
+.focus-hit{position:relative;animation:focusPulse 1.2s ease-out 3}
+@keyframes focusPulse{0%{box-shadow:0 0 0 0 rgba(126,231,135,.55)}70%{box-shadow:0 0 0 9px rgba(126,231,135,0)}100%{box-shadow:0 0 0 0 rgba(126,231,135,0)}}
+.focus-hit::after{content:"";position:absolute;left:0;top:8%;bottom:8%;width:2px;border-radius:2px;background:var(--accent,#7ee787);opacity:.9}
+
+/* ============================================================
+   关于页样式（子代理写好 HTML/JS，但 CSS 在我一次 read+write 截断里丢了，重写）
+   启动动画：三条轨道用 pathLength=100 + stroke-dashoffset 描边画出来，2 秒内结束。
+   ============================================================ */
+.about-box{max-width:660px;width:min(660px,92vw);max-height:86vh;overflow:auto}
+.about-x{background:transparent;border:1px solid var(--line);color:var(--ink-3);
+  width:28px;height:28px;border-radius:9px;cursor:pointer;font-size:13px;line-height:1}
+.about-x:hover{border-color:rgba(126,231,135,.45);color:var(--ink)}
+
+/* 启动区块 */
+.about-boot{position:relative;display:flex;flex-direction:column;align-items:center;
+  padding:18px 0 22px;margin-bottom:6px}
+.ab-glow{position:absolute;left:50%;top:44%;width:270px;height:270px;transform:translate(-50%,-50%);
+  border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%, rgba(126,231,135,.16) 0%, transparent 66%)}
+/* ★ 必须有明确尺寸，否则 SVG 会撑满整个容器（之前那个巨大的黑色花瓣就是这个原因） */
+.ab-sigil{position:relative;width:96px;height:96px;display:block}
+/* ★ 轨道必须 fill:none，否则默认黑色填充，三条椭圆叠起来就是一朵黑花 */
+.ab-orbit{fill:none;stroke:#7ee787;stroke-width:1.5;stroke-linecap:round;opacity:.85;
+  stroke-dasharray:100;stroke-dashoffset:100;
+  animation:abDraw 1.25s cubic-bezier(.22,1,.36,1) forwards}
+.ab-o2{animation-delay:.16s;stroke:#5fd18a}
+.ab-o3{animation-delay:.32s;stroke:#e8c08a}
+@keyframes abDraw{to{stroke-dashoffset:0}}
+.ab-core{fill:#e8c08a;opacity:0;animation:abCore .45s ease-out 1.25s forwards}
+@keyframes abCore{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+.ab-core{transform-origin:32px 32px}
+.ab-word{position:relative;margin-top:12px;font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+  font-size:20px;letter-spacing:.6em;text-indent:.6em;color:#e8fbf0}
+.ab-sub{margin-top:6px;font-size:11px;letter-spacing:.5em;text-indent:.5em;color:#e8c08a;opacity:.7}
+.ab-ver{margin-top:4px;font-family:Consolas,monospace;font-size:10px;letter-spacing:.16em;color:#8fb3a3;opacity:.6}
+
+/* 正文 */
+.ab-lead{margin:16px 0 20px;font-size:13.5px;line-height:1.85;color:var(--ink-2);letter-spacing:.02em}
+.ab-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:560px){.ab-cols{grid-template-columns:1fr}}
+.ab-sec{margin-bottom:18px}
+.ab-h{font-size:11px;letter-spacing:.42em;color:#e8c08a;opacity:.62;font-weight:400;margin:0 0 10px}
+.ab-sig{font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",serif;
+  font-size:17px;letter-spacing:.24em;color:#e8fbf0;margin:0 0 8px}
+.ab-alias{margin-left:12px;font-size:11px;letter-spacing:.2em;color:#7ee787;opacity:.6}
+.ab-p{margin:0;font-size:12.5px;line-height:1.8;color:var(--ink-3)}
+.ab-list{list-style:none;margin:0;padding:0}
+.ab-list li{position:relative;padding-left:15px;margin-bottom:8px;
+  font-size:12.5px;line-height:1.7;color:var(--ink-3)}
+.ab-list li::before{content:"";position:absolute;left:0;top:.62em;width:5px;height:1px;
+  background:#7ee787;opacity:.6}
+.ab-rules li b{color:#cfe9da;font-weight:600}
+.ab-foot{display:flex;align-items:center;gap:14px;margin-top:22px;padding-top:14px;
+  border-top:1px solid var(--line)}
+.ab-stamp{font-family:Consolas,monospace;font-size:10px;letter-spacing:.1em;color:#8fb3a3;opacity:.6}
+.ab-esc{margin-left:auto;font-size:10.5px;letter-spacing:.16em;color:#8fb3a3;opacity:.5}
+
+/* 规范要求：reduced-motion 下退化成短交叉淡入，而不是完全没动 */
+@media (prefers-reduced-motion: reduce){
+  .ab-orbit{animation:none;stroke-dashoffset:0}
+  .ab-core{animation:abFadeIn .3s ease-out forwards}
+  @keyframes abFadeIn{to{opacity:1}}
+}
+
+/* ============================================================
+   ⑥ 启动序列（入场编排）—— atmosphere.js 会按 seq 给元素加 .enter 并设 animationDelay。
+   这一块 CSS 也在那次 read+write 截断里丢了，重写。
+   保险：关键帧里只有 transform + opacity，并且在 atmosphere.js 里加了兜底
+   （1.4 秒后强制落到终态），避免动画不推进时元素停在不可见状态。
+   ============================================================ */
+@keyframes enterUp{
+  from{opacity:0;transform:translateY(15px)}
+  to{opacity:1;transform:none}
+}
+@keyframes enterRight{
+  from{opacity:0;transform:translateX(-14px)}
+  to{opacity:1;transform:none}
+}
+@keyframes enterPop{
+  from{opacity:0;transform:scale(.86)}
+  to{opacity:1;transform:none}
+}
+
+#topbar.enter{animation:enterUp .5s cubic-bezier(.22,1,.36,1) both}
+#sidebar.enter{animation:enterRight .58s cubic-bezier(.22,1,.36,1) both}
+#orbs.enter{animation:enterUp .56s cubic-bezier(.22,1,.36,1) both}
+#pet-wrap.enter{animation:enterPop .72s cubic-bezier(.22,1,.36,1) both}
+#bubble.enter{animation:enterPop .46s cubic-bezier(.22,1,.36,1) both}
+#ambient-line.enter{animation:enterUp .5s cubic-bezier(.22,1,.36,1) both}
+#context.enter{animation:enterRight .58s cubic-bezier(.22,1,.36,1) both}
+#statusbar.enter{animation:enterUp .5s cubic-bezier(.22,1,.36,1) both}
+
+/* booting 期间先按住，避免"先闪一下再入场" */
+body.booting #topbar,body.booting #sidebar,body.booting #orbs,
+body.booting #pet-wrap,body.booting #bubble,body.booting #ambient-line,
+body.booting #context,body.booting #statusbar{opacity:0}
+
+/* 规范：reduced-motion 下退化成短交叉淡入，而不是位移 */
+@media (prefers-reduced-motion: reduce){
+  #topbar.enter,#sidebar.enter,#orbs.enter,#pet-wrap.enter,#bubble.enter,
+  #ambient-line.enter,#context.enter,#statusbar.enter{animation:enterFade .28s ease-out both}
+  @keyframes enterFade{from{opacity:0}to{opacity:1}}
+}
